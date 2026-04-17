@@ -1,0 +1,83 @@
+package events
+
+import (
+	"fmt"
+	"go-crawler-notification/components/layouts"
+	"go-crawler-notification/models"
+)
+
+templ Index(props layouts.PageProps, events []models.MonitorEvent) {
+	@layouts.Base(props) {
+		<div class="page-header">
+			<h1><i class="fa fa-list"></i> Events</h1>
+		</div>
+		if len(events) == 0 {
+			<div class="alert alert-info">
+				<i class="fa fa-info-circle"></i>
+				아직 이벤트가 없습니다. 에이전트를 시작하면 여기에 이벤트가 기록됩니다.
+			</div>
+		} else {
+			<div class="table-responsive">
+				<table class="table table-condensed table-striped">
+					<thead>
+						<tr>
+							<th>시간</th>
+							<th>에이전트</th>
+							<th>상태</th>
+							<th>메시지</th>
+							<th>모드</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, ev := range events {
+							<tr class={ eventRowClass(ev.Status) }>
+								<td><small>{ ev.OccurredAt.Format("01-02 15:04:05") }</small></td>
+								<td>
+									<a href={ templ.URL(fmt.Sprintf("/agents/%s", ev.AgentID)) }>
+										{ ev.AgentName }
+									</a>
+								</td>
+								<td>@StatusLabel(ev.Status)</td>
+								<td>{ ev.Message }</td>
+								<td>
+									if ev.Mode != "" {
+										<code>{ ev.Mode }</code>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+			<p class="text-muted text-right">
+				<small>최근 { fmt.Sprintf("%d", len(events)) }건 표시 (메모리 내 최대 500건)</small>
+			</p>
+		}
+	}
+}
+
+templ StatusLabel(status string) {
+	switch status {
+	case "matched":
+		<span class="label label-warning">키워드 감지</span>
+	case "version_changed":
+		<span class="label label-primary">새 버전</span>
+	case "error":
+		<span class="label label-danger">오류</span>
+	default:
+		<span class="label label-default">점검</span>
+	}
+}
+
+func eventRowClass(status string) string {
+	switch status {
+	case "error":
+		return "danger"
+	case "version_changed":
+		return "info"
+	case "matched":
+		return "warning"
+	default:
+		return ""
+	}
+}

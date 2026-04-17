@@ -1,0 +1,121 @@
+package webhooks
+
+import (
+	"fmt"
+	"go-crawler-notification/components/layouts"
+	"go-crawler-notification/models"
+)
+
+templ Index(props layouts.PageProps, webhooks []models.Webhook) {
+	@layouts.Base(props) {
+		<div class="page-header">
+			<h1>
+				<i class="fa fa-bell"></i> Webhooks
+				<a href="/webhooks/new" class="btn btn-primary btn-sm pull-right">
+					<i class="fa fa-plus"></i> New Webhook
+				</a>
+			</h1>
+		</div>
+		<p class="text-muted">웹훅을 등록하고 에이전트와 연결하면, 이벤트 발생 시 Slack·Telegram 등으로 알림을 받을 수 있습니다.</p>
+		if len(webhooks) == 0 {
+			<div class="alert alert-info">
+				<i class="fa fa-info-circle"></i>
+				등록된 웹훅이 없습니다. <a href="/webhooks/new">새 웹훅을 만들어 보세요.</a>
+			</div>
+		} else {
+			<div class="table-responsive">
+				<table class="table table-striped table-hover">
+					<thead>
+						<tr>
+							<th>이름</th>
+							<th>종류</th>
+							<th>URL / 설정</th>
+							<th>생성일</th>
+							<th>액션</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, wh := range webhooks {
+							<tr>
+								<td><strong>{ wh.Name }</strong></td>
+								<td>
+									<span class={ fmt.Sprintf("label label-%s", kindClass(wh.Kind)) }>
+										{ kindLabel(wh.Kind) }
+									</span>
+								</td>
+								<td>
+									<small class="text-muted">{ webhookSummary(wh) }</small>
+								</td>
+								<td><small>{ wh.CreatedAt.Format("2006-01-02") }</small></td>
+								<td>
+									<div class="btn-group btn-group-xs">
+										<a href={ templ.URL(fmt.Sprintf("/webhooks/%s/edit", wh.ID)) } class="btn btn-default">
+											<i class="fa fa-pencil"></i>
+										</a>
+										<form method="POST" action={ templ.URL(fmt.Sprintf("/webhooks/%s/test", wh.ID)) } style="display:inline;">
+											<button type="submit" class="btn btn-info" title="연결 테스트">
+												<i class="fa fa-paper-plane"></i>
+											</button>
+										</form>
+										<form method="POST" action={ templ.URL(fmt.Sprintf("/webhooks/%s/delete", wh.ID)) } style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?')">
+											<button type="submit" class="btn btn-danger">
+												<i class="fa fa-trash"></i>
+											</button>
+										</form>
+									</div>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	}
+}
+
+func kindClass(kind string) string {
+	switch kind {
+	case "slack":
+		return "success"
+	case "telegram":
+		return "info"
+	default:
+		return "default"
+	}
+}
+
+func kindLabel(kind string) string {
+	switch kind {
+	case "slack":
+		return "Slack"
+	case "telegram":
+		return "Telegram"
+	default:
+		return "Custom"
+	}
+}
+
+func webhookSummary(wh models.Webhook) string {
+	switch wh.Kind {
+	case "slack":
+		if wh.URL != "" {
+			return truncate(wh.URL, 50)
+		}
+		return "-"
+	case "telegram":
+		chatID := wh.Config["chat_id"]
+		if chatID != "" {
+			return fmt.Sprintf("Chat ID: %s", chatID)
+		}
+		return "-"
+	default:
+		return truncate(wh.URL, 50)
+	}
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}

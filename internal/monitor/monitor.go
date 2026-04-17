@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"go-crawler-demo/internal/crawler"
-	"go-crawler-demo/internal/state"
-	"go-crawler-demo/internal/version"
+	"go-crawler-notification/internal/crawler"
+	"go-crawler-notification/internal/state"
+	"go-crawler-notification/internal/version"
 )
 
 type Event struct {

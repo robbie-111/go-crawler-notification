@@ -1,0 +1,16 @@
+[
+  {
+    "id": "7d3716f9-8864-494a-b3bf-47e8171d0d00",
+    "name": "AppLovin Max SDK Android Fyber",
+    "url": "https://github.com/AppLovin/AppLovin-MAX-SDK-Android/blob/master/Fyber/CHANGELOG.md",
+    "keyword": "",
+    "enable_keyword": false,
+    "enable_version": true,
+    "alert_on_first_seen": false,
+    "interval_seconds": 60,
+    "webhook_ids": null,
+    "enabled": true,
+    "created_at": "2026-04-17T19:38:30.839083+09:00",
+    "updated_at": "2026-04-17T19:38:30.839083+09:00"
+  }
+]

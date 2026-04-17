@@ -1,0 +1,57 @@
+package layouts
+
+import (
+	"go-crawler-notification/models"
+)
+
+// PageProps는 모든 핸들러가 레이아웃에 전달하는 공통 메타데이터입니다.
+type PageProps struct {
+	Title       string
+	Flash       []models.FlashMessage
+	CurrentPath string
+	LoadSSE     bool // SSE 클라이언트 JS 로딩 여부
+}
+
+templ Base(props PageProps) {
+	<!DOCTYPE html>
+	<html lang="ko">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			if props.Title != "" {
+				<title>{ props.Title } - Crawler Monitor</title>
+			} else {
+				<title>Crawler Monitor</title>
+			}
+			<!-- Bootstrap 3 CSS -->
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"/>
+			<!-- Font Awesome 6 -->
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+			<!-- Application CSS -->
+			<link rel="stylesheet" href="/static/css/application.css"/>
+		</head>
+		<body>
+			<!-- Fixed top navbar -->
+			<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+				<div class="container">
+					@Navigation(props)
+				</div>
+			</nav>
+			<!-- Main content -->
+			<div id="main" role="main" style="padding-top: 70px;">
+				<div class="container">
+					@Messages(props.Flash)
+					{ children... }
+				</div>
+			</div>
+			<!-- jQuery + Bootstrap JS -->
+			<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+			<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+			<!-- Application JS -->
+			<script src="/static/js/application.js"></script>
+			if props.LoadSSE {
+				<script src="/static/js/monitor.js"></script>
+			}
+		</body>
+	</html>
+}

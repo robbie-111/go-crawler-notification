@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"go-crawler-demo/internal/normalize"
+	"go-crawler-notification/internal/normalize"
 
 	"github.com/gocolly/colly/v2"
 )

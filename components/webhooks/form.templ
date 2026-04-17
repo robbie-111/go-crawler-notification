@@ -1,0 +1,128 @@
+package webhooks
+
+import (
+	"fmt"
+	"go-crawler-notification/components/layouts"
+	"go-crawler-notification/models"
+)
+
+templ NewWebhook(props layouts.PageProps) {
+	@webhookForm(props, models.Webhook{Kind: "slack", Config: map[string]string{}}, "새 웹훅 생성", "/webhooks", false)
+}
+
+templ EditWebhook(props layouts.PageProps, wh models.Webhook) {
+	@webhookForm(props, wh, "웹훅 편집", fmt.Sprintf("/webhooks/%s", wh.ID), true)
+}
+
+templ webhookForm(props layouts.PageProps, wh models.Webhook, title, action string, isEdit bool) {
+	@layouts.Base(props) {
+		<div class="page-header">
+			<h1><i class="fa fa-bell"></i> { title }</h1>
+		</div>
+		<div class="row">
+			<div class="col-md-8 col-md-offset-2">
+				<form method="POST" action={ templ.URL(action) } class="form-horizontal">
+					<!-- 공통 필드 -->
+					<div class="form-group">
+						<label class="col-sm-3 control-label">이름 <span class="text-danger">*</span></label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control" name="name" value={ wh.Name } placeholder="예: 개발팀 Slack" required/>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-3 control-label">종류 <span class="text-danger">*</span></label>
+						<div class="col-sm-9">
+							<select class="form-control" name="kind" id="webhook-kind">
+								<option value="slack" selected?={ wh.Kind == "slack" }>Slack (Incoming Webhook)</option>
+								<option value="telegram" selected?={ wh.Kind == "telegram" }>Telegram Bot</option>
+								<option value="custom" selected?={ wh.Kind == "custom" }>Custom HTTP Webhook</option>
+							</select>
+						</div>
+					</div>
+					<!-- Slack 설정 -->
+					<div id="slack-fields" class="kind-fields">
+						<div class="form-group">
+							<label class="col-sm-3 control-label">Webhook URL <span class="text-danger">*</span></label>
+							<div class="col-sm-9">
+								<input type="url" class="form-control" name="url" value={ wh.URL } placeholder="https://hooks.slack.com/services/..."/>
+								<p class="help-block">Slack 앱의 Incoming Webhook URL을 입력하세요.</p>
+							</div>
+						</div>
+					</div>
+					<!-- Telegram 설정 -->
+					<div id="telegram-fields" class="kind-fields" style="display:none;">
+						<div class="form-group">
+							<label class="col-sm-3 control-label">Bot Token <span class="text-danger">*</span></label>
+							<div class="col-sm-9">
+								<input type="text" class="form-control" name="bot_token" value={ wh.Config["bot_token"] } placeholder="123456:ABC-DEF..."/>
+								<p class="help-block">BotFather에서 받은 토큰.</p>
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label">Chat ID <span class="text-danger">*</span></label>
+							<div class="col-sm-9">
+								<input type="text" class="form-control" name="chat_id" value={ wh.Config["chat_id"] } placeholder="-1001234567890"/>
+								<p class="help-block">그룹 Chat ID 또는 개인 user_id.</p>
+							</div>
+						</div>
+					</div>
+					<!-- Custom 설정 -->
+					<div id="custom-fields" class="kind-fields" style="display:none;">
+						<div class="form-group">
+							<label class="col-sm-3 control-label">URL <span class="text-danger">*</span></label>
+							<div class="col-sm-9">
+								<input type="url" class="form-control" name="url" value={ wh.URL } placeholder="https://your-service.com/webhook"/>
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label">헤더 (JSON)</label>
+							<div class="col-sm-9">
+								<textarea class="form-control" name="headers" rows="3" placeholder='{"Authorization": "Bearer token"}'>{ wh.Config["headers"] }</textarea>
+								<p class="help-block">추가 HTTP 헤더를 JSON 형태로 입력 (선택사항).</p>
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label">바디 템플릿</label>
+							<div class="col-sm-9">
+								<textarea class="form-control" name="body_template" rows="4" placeholder='{"text": "{{message}}"}'>{ wh.Config["body_template"] }</textarea>
+								<p class="help-block">
+									사용 가능한 변수:
+									<code>&#123;&#123;message&#125;&#125;</code>
+									<code>&#123;&#123;agent&#125;&#125;</code>
+									<code>&#123;&#123;url&#125;&#125;</code>
+									<code>&#123;&#123;version&#125;&#125;</code>
+									<code>&#123;&#123;keyword&#125;&#125;</code>
+								</p>
+							</div>
+						</div>
+					</div>
+					<!-- 버튼 -->
+					<div class="form-group" style="margin-top:20px;">
+						<div class="col-sm-offset-3 col-sm-9">
+							<button type="submit" class="btn btn-primary">
+								<i class="fa fa-save"></i>
+								if isEdit {
+									저장
+								} else {
+									생성
+								}
+							</button>
+							<a href="/webhooks" class="btn btn-default">취소</a>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+		<script>
+			$(function() {
+				function showKindFields() {
+					var kind = $('#webhook-kind').val();
+					$('.kind-fields').hide();
+					$('#' + kind + '-fields').show();
+				}
+				$('#webhook-kind').on('change', showKindFields);
+				showKindFields();
+			});
+		</script>
+	}
+}

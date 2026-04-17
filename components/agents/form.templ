@@ -1,0 +1,174 @@
+package agents
+
+import (
+	"fmt"
+	"go-crawler-notification/components/layouts"
+	"go-crawler-notification/models"
+)
+
+templ New(props layouts.PageProps, webhooks []models.Webhook) {
+	@form(props, models.Agent{EnableKeyword: true, EnableVersion: true, IntervalSeconds: 60}, webhooks, "새 에이전트 생성", "/agents", false)
+}
+
+templ Edit(props layouts.PageProps, agent models.Agent, webhooks []models.Webhook) {
+	@form(props, agent, webhooks, "에이전트 편집", fmt.Sprintf("/agents/%s", agent.ID), true)
+}
+
+templ form(props layouts.PageProps, agent models.Agent, webhooks []models.Webhook, title, action string, isEdit bool) {
+	@layouts.Base(props) {
+		<div class="page-header">
+			<h1><i class="fa fa-robot"></i> { title }</h1>
+		</div>
+		<div class="row">
+			<div class="col-md-8 col-md-offset-2">
+				<form method="POST" action={ templ.URL(action) } class="form-horizontal">
+					<!-- 기본 설정 탭 -->
+					<ul class="nav nav-tabs" style="margin-bottom:20px;">
+						<li class="active"><a href="#tab-basic" data-toggle="tab">기본 설정</a></li>
+						<li><a href="#tab-notify" data-toggle="tab">알림 설정</a></li>
+					</ul>
+					<div class="tab-content">
+						<!-- 기본 설정 -->
+						<div id="tab-basic" class="tab-pane active">
+							<div class="form-group">
+								<label class="col-sm-3 control-label">이름 <span class="text-danger">*</span></label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" name="name" value={ agent.Name } placeholder="예: Unity Localization 버전 감시" required/>
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">모니터링 URL <span class="text-danger">*</span></label>
+								<div class="col-sm-9">
+									<input type="url" class="form-control" name="url" value={ agent.URL } placeholder="https://example.com/changelog" required/>
+									<p class="help-block">GitHub blob URL은 자동으로 raw URL로 변환됩니다.</p>
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">폴링 주기 (초)</label>
+								<div class="col-sm-9">
+									<input type="number" class="form-control" name="interval_seconds" value={ fmt.Sprintf("%d", intervalDefault(agent.IntervalSeconds)) } min="10" max="86400"/>
+									<p class="help-block">최소 10초. 기본값: 60초.</p>
+								</div>
+							</div>
+							<hr/>
+							<h4>감지 옵션</h4>
+							<div class="form-group">
+								<div class="col-sm-offset-3 col-sm-9">
+									<div class="checkbox">
+										<label>
+											if agent.EnableKeyword {
+												<input type="checkbox" name="enable_keyword" value="1" checked/>
+											} else {
+												<input type="checkbox" name="enable_keyword" value="1"/>
+											}
+											키워드 감지 사용
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group" id="keyword-group">
+								<label class="col-sm-3 control-label">키워드</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" name="keyword" value={ agent.Keyword } placeholder="감지할 키워드 입력"/>
+									<p class="help-block">키워드 감지 사용 시 필수.</p>
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="col-sm-offset-3 col-sm-9">
+									<div class="checkbox">
+										<label>
+											if agent.EnableVersion {
+												<input type="checkbox" name="enable_version" value="1" checked/>
+											} else {
+												<input type="checkbox" name="enable_version" value="1"/>
+											}
+											새 버전 감지 사용
+										</label>
+									</div>
+									<div class="checkbox">
+										<label>
+											if agent.AlertOnFirstSeen {
+												<input type="checkbox" name="alert_on_first_seen" value="1" checked/>
+											} else {
+												<input type="checkbox" name="alert_on_first_seen" value="1"/>
+											}
+											첫 감지 시에도 알림 발송
+										</label>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- 알림 설정 탭 -->
+						<div id="tab-notify" class="tab-pane">
+							if len(webhooks) == 0 {
+								<div class="alert alert-warning">
+									<i class="fa fa-exclamation-triangle"></i>
+									등록된 웹훅이 없습니다.
+									<a href="/webhooks/new">웹훅을 먼저 생성</a>하고 연결하세요.
+								</div>
+							} else {
+								<p class="text-muted">이벤트 발생 시 알림을 받을 웹훅을 선택하세요.</p>
+								for _, wh := range webhooks {
+									<div class="checkbox">
+										<label>
+											if containsID(agent.WebhookIDs, wh.ID) {
+												<input type="checkbox" name="webhook_ids" value={ wh.ID } checked/>
+											} else {
+												<input type="checkbox" name="webhook_ids" value={ wh.ID }/>
+											}
+											<span class={ fmt.Sprintf("label label-%s", webhookKindClass(wh.Kind)) }>{ wh.Kind }</span>
+											{ wh.Name }
+										</label>
+									</div>
+								}
+							}
+							<p class="text-muted" style="margin-top:10px;">
+								<small><i class="fa fa-info-circle"></i> 알림은 키워드 감지, 새 버전 감지, 오류 발생 시에만 발송됩니다.</small>
+							</p>
+						</div>
+					</div>
+					<!-- 버튼 -->
+					<div class="form-group" style="margin-top:20px;">
+						<div class="col-sm-offset-3 col-sm-9">
+							<button type="submit" class="btn btn-primary">
+								<i class="fa fa-save"></i>
+								if isEdit {
+									저장
+								} else {
+									생성
+								}
+							</button>
+							<a href="/agents" class="btn btn-default">취소</a>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+		<script>
+			$(function() {
+				function toggleKeyword() {
+					var checked = $('input[name="enable_keyword"]').is(':checked');
+					$('#keyword-group').toggle(checked);
+				}
+				$('input[name="enable_keyword"]').on('change', toggleKeyword);
+				toggleKeyword();
+			});
+		</script>
+	}
+}
+
+func intervalDefault(v int) int {
+	if v <= 0 {
+		return 60
+	}
+	return v
+}
+
+func containsID(ids []string, id string) bool {
+	for _, s := range ids {
+		if s == id {
+			return true
+		}
+	}
+	return false
+}

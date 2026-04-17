@@ -1,0 +1,60 @@
+package layouts
+
+import (
+	"fmt"
+	"go-crawler-notification/models"
+)
+
+templ Navigation(props PageProps) {
+	<div class="navbar-header">
+		<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#nav-collapse">
+			<span class="sr-only">Toggle navigation</span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+		</button>
+		<a class="navbar-brand" href="/agents">
+			<i class="fa fa-bug"></i> Crawler Monitor
+		</a>
+	</div>
+	<div class="collapse navbar-collapse" id="nav-collapse">
+		<ul class="nav navbar-nav">
+			<li class={ navLinkClass("/agents", props.CurrentPath) }>
+				<a href="/agents"><i class="fa fa-robot"></i> Agents</a>
+			</li>
+			<li class={ navLinkClass("/events", props.CurrentPath) }>
+				<a href="/events"><i class="fa fa-list"></i> Events</a>
+			</li>
+			<li class={ navLinkClass("/webhooks", props.CurrentPath) }>
+				<a href="/webhooks"><i class="fa fa-bell"></i> Webhooks</a>
+			</li>
+		</ul>
+	</div>
+}
+
+func navLinkClass(path, currentPath string) string {
+	if currentPath == path || (len(currentPath) > len(path) && currentPath[:len(path)] == path && path != "/") {
+		return "active"
+	}
+	return ""
+}
+
+templ Messages(flashes []models.FlashMessage) {
+	if len(flashes) > 0 {
+		<div class="flash" style="position:fixed;width:340px;z-index:99999;right:20px;top:70px;">
+			for _, flash := range flashes {
+				<div class={ fmt.Sprintf("alert alert-%s alert-dismissable", flashClass(flash.Type)) }>
+					<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+					<div>{ flash.Message }</div>
+				</div>
+			}
+		</div>
+	}
+}
+
+func flashClass(t string) string {
+	if t == "notice" {
+		return "success"
+	}
+	return "danger"
+}
