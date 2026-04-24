@@ -1,0 +1,65 @@
+package agents
+
+import (
+	"fmt"
+	"go-crawler-notification/models"
+)
+
+templ ActionMenu(agent models.Agent, running bool, returnTo string) {
+	<ul class="dropdown-menu" role="menu">
+		<li>
+			<a href={ templ.URL(fmt.Sprintf("/agents/%s?return=%s", agent.ID, returnTo)) } tabindex="-1">
+				<span class="glyphicon glyphicon-eye-open"></span> 상세 보기
+			</a>
+		</li>
+		<li>
+			<a href={ templ.URL(fmt.Sprintf("/agents/%s/edit?return=%s", agent.ID, returnTo)) } tabindex="-1">
+				<span class="glyphicon glyphicon-pencil"></span> 편집
+			</a>
+		</li>
+		<li class="divider"></li>
+		if running {
+			<li>
+				<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/stop", agent.ID)) }>
+					<button type="submit" class="btn btn-link" style="padding:3px 20px; color:#333;" tabindex="-1">
+						<span class="glyphicon glyphicon-stop" style="color:#f0ad4e;"></span> 중지
+					</button>
+				</form>
+			</li>
+		} else {
+			<li>
+				<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/start", agent.ID)) }>
+					<button type="submit" class="btn btn-link" style="padding:3px 20px; color:#333;" tabindex="-1">
+						<span class="glyphicon glyphicon-play" style="color:#5cb85c;"></span> 시작
+					</button>
+				</form>
+			</li>
+		}
+		<li class="divider"></li>
+		<li>
+			<a href="#" data-toggle="modal" data-target={ fmt.Sprintf("#confirm-agent-delete-%s", agent.ID) } tabindex="-1">
+				<span class="glyphicon glyphicon-remove" style="color:#d9534f;"></span> 삭제
+			</a>
+		</li>
+	</ul>
+	<!-- 삭제 확인 모달 -->
+	<div id={ fmt.Sprintf("confirm-agent-delete-%s", agent.ID) } class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-sm">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title">삭제 확인</h4>
+				</div>
+				<div class="modal-body">
+					<p>&quot;{ agent.Name }&quot; 에이전트를 삭제하시겠습니까?</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">취소</button>
+					<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/delete", agent.ID)) } style="display:inline;">
+						<button type="submit" class="btn btn-danger">삭제</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+}

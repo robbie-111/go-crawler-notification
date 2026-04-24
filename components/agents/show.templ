@@ -12,22 +12,12 @@ templ Show(props layouts.PageProps, agent models.Agent, events []models.MonitorE
 			<h1>
 				<i class="fa fa-robot"></i> { agent.Name }
 				<div class="pull-right">
-					<a href={ templ.URL(fmt.Sprintf("/agents/%s/edit", agent.ID)) } class="btn btn-default btn-sm">
-						<i class="fa fa-pencil"></i> 편집
-					</a>
-					if running {
-						<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/stop", agent.ID)) } style="display:inline;">
-							<button type="submit" class="btn btn-warning btn-sm">
-								<i class="fa fa-stop"></i> 중지
-							</button>
-						</form>
-					} else {
-						<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/start", agent.ID)) } style="display:inline;">
-							<button type="submit" class="btn btn-success btn-sm">
-								<i class="fa fa-play"></i> 시작
-							</button>
-						</form>
-					}
+					<div class="btn-group">
+						<button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+							<span class="glyphicon glyphicon-th-list"></span> Actions <span class="caret"></span>
+						</button>
+						@ActionMenu(agent, running, fmt.Sprintf("/agents/%s", agent.ID))
+					</div>
 				</div>
 			</h1>
 		</div>

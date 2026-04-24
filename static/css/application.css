@@ -90,6 +90,25 @@ body {
   white-space: nowrap;
 }
 
+/* table-responsive 안에서 드롭다운이 잘리지 않도록 */
+.table-responsive {
+  overflow: visible !important;
+}
+
+/* 드롭다운 메뉴 안의 form 버튼 스타일 정규화 */
+.dropdown-menu form {
+  margin: 0;
+}
+
+.dropdown-menu .btn-link {
+  text-align: left;
+  width: 100%;
+  border: none;
+  background: none;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
 /* ─── 패널 ────────────────────────────────────────── */
 .panel {
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);

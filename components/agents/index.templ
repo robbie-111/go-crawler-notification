@@ -80,31 +80,11 @@ templ AgentRow(agent models.Agent, running bool) {
 			@StatusBadge(running)
 		</td>
 		<td>
-			<div class="btn-group btn-group-xs">
-				<a href={ templ.URL(fmt.Sprintf("/agents/%s", agent.ID)) } class="btn btn-default" title="상세">
-					<i class="fa fa-eye"></i>
-				</a>
-				<a href={ templ.URL(fmt.Sprintf("/agents/%s/edit", agent.ID)) } class="btn btn-default" title="편집">
-					<i class="fa fa-pencil"></i>
-				</a>
-				if running {
-					<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/stop", agent.ID)) } style="display:inline;">
-						<button type="submit" class="btn btn-warning" title="중지">
-							<i class="fa fa-stop"></i>
-						</button>
-					</form>
-				} else {
-					<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/start", agent.ID)) } style="display:inline;">
-						<button type="submit" class="btn btn-success" title="시작">
-							<i class="fa fa-play"></i>
-						</button>
-					</form>
-				}
-				<form method="POST" action={ templ.URL(fmt.Sprintf("/agents/%s/delete", agent.ID)) } style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?')">
-					<button type="submit" class="btn btn-danger" title="삭제">
-						<i class="fa fa-trash"></i>
-					</button>
-				</form>
+			<div class="btn-group">
+				<button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
+					<span class="glyphicon glyphicon-th-list"></span> Actions <span class="caret"></span>
+				</button>
+				@ActionMenu(agent, running, "/agents")
 			</div>
 		</td>
 	</tr>
