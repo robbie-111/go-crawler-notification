@@ -6,16 +6,18 @@
     "keyword": "",
     "enable_keyword": false,
     "enable_version": true,
-    "alert_on_first_seen": false,
+    "alert_on_first_seen": true,
     "interval_seconds": 60,
-    "webhook_ids": null,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
     "enabled": true,
     "created_at": "2026-04-17T19:38:30.839083+09:00",
-    "updated_at": "2026-04-17T19:38:30.839083+09:00"
+    "updated_at": "2026-05-08T20:17:06.16708+09:00"
   },
   {
     "id": "ae382223-0588-41af-8d60-d29ad9fbf107",
-    "name": "Unity Mobile Notificaitons 릴리즈노트 감시",
+    "name": "Unity Mobile Notificaitons",
     "url": "https://docs.unity3d.com/Packages/com.unity.mobile.notifications@2.4/changelog/CHANGELOG.html",
     "keyword": "",
     "enable_keyword": false,
@@ -25,6 +27,6 @@
     "webhook_ids": null,
     "enabled": true,
     "created_at": "2026-04-24T14:29:41.719226+09:00",
-    "updated_at": "2026-04-24T14:29:41.719226+09:00"
+    "updated_at": "2026-05-08T20:02:15.28098+09:00"
   }
 ]

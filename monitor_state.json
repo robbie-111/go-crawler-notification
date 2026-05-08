@@ -3,6 +3,10 @@
     "last_seen_version": "1.5.11",
     "last_checked_at": "2026-04-10T18:43:22.79187+09:00"
   },
+  "https://docs.unity3d.com/Packages/com.unity.mobile.notifications@2.4/changelog/CHANGELOG.html": {
+    "last_seen_version": "2.4.3",
+    "last_checked_at": "2026-05-08T20:29:15.287349+09:00"
+  },
   "https://docs.unity3d.com/Packages/com.unity.purchasing@5.2/changelog/CHANGELOG.html": {
     "last_seen_version": "5.2.1",
     "last_checked_at": "2026-04-10T19:40:28.528834+09:00"
@@ -12,7 +16,7 @@
     "last_checked_at": "2026-04-10T19:30:27.284861+09:00"
   },
   "https://raw.githubusercontent.com/AppLovin/AppLovin-MAX-SDK-Android/master/Fyber/CHANGELOG.md": {
-    "last_seen_version": "8.4.4",
-    "last_checked_at": "2026-04-24T14:15:24.350599+09:00"
+    "last_seen_version": "8.4.5",
+    "last_checked_at": "2026-05-08T20:29:10.761591+09:00"
   }
 }

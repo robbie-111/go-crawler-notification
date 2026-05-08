@@ -8,91 +8,121 @@ import (
 
 templ Show(props layouts.PageProps, agent models.Agent, events []models.MonitorEvent, running bool, webhooks []models.Webhook) {
 	@layouts.Base(props) {
-		<div class="page-header">
-			<h1>
-				<i class="fa fa-robot"></i> { agent.Name }
-				<div class="pull-right">
-					<div class="btn-group">
-						<button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
-							<span class="glyphicon glyphicon-th-list"></span> Actions <span class="caret"></span>
-						</button>
-						@ActionMenu(agent, running, fmt.Sprintf("/agents/%s", agent.ID))
-					</div>
+		<div class="container agent-show">
+			<div class="row">
+				<!-- Left: Tab navigation -->
+				<div class="col-md-2">
+					<ul class="nav nav-pills nav-stacked" id="show-tabs">
+						<li>
+							<a href="/agents">
+								<span class="glyphicon glyphicon-chevron-left"></span> Back
+							</a>
+						</li>
+					<li class="active">
+							<a href="#details" data-toggle="tab">
+								<span class="glyphicon glyphicon-indent-left"></span> Details
+							</a>
+						</li>
+						<li>
+							<a href="#logs" data-toggle="tab" data-agent-id={ agent.ID }>
+								<span class="glyphicon glyphicon-list-alt"></span> Logs
+							</a>
+						</li>
+						<li>
+							<a href="#webhooks" data-toggle="tab">
+								<span class="glyphicon glyphicon-link"></span> Webhooks
+							</a>
+						</li>
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown" href="#">
+								<span class="glyphicon glyphicon-th-list"></span> Actions <span class="caret"></span>
+							</a>
+							@ActionMenu(agent, running, fmt.Sprintf("/agents/%s", agent.ID))
+						</li>
+					</ul>
 				</div>
-			</h1>
-		</div>
-		<div class="row">
-			<!-- 설정 패널 -->
-			<div class="col-md-4">
-				<div class="panel panel-default">
-					<div class="panel-heading"><strong>설정</strong></div>
-					<div class="panel-body">
-						<dl class="dl-horizontal" style="margin-bottom:0;">
-							<dt>상태</dt>
-							<dd>@StatusBadge(running)</dd>
-							<dt>URL</dt>
-							<dd><a href={ templ.URL(agent.URL) } target="_blank">{ truncate(agent.URL, 50) }</a></dd>
-							<dt>키워드</dt>
-							<dd>
+				<!-- Right: Tab content -->
+				<div class="col-md-10">
+					<div class="tab-content">
+						<!-- Details tab (active by default) -->
+						<div class="tab-pane active" id="details">
+							<h2>{ agent.Name } Details</h2>
+							<p>
+								<b>상태:</b> @StatusBadge(running)
+							</p>
+							<p>
+								<b>URL:</b>
+								<a href={ templ.URL(agent.URL) } target="_blank" style="word-break:break-all;">{ agent.URL }</a>
+							</p>
+							<p>
+								<b>키워드:</b>
 								if agent.Keyword != "" {
 									<code>{ agent.Keyword }</code>
 								} else {
 									<span class="text-muted">-</span>
 								}
-							</dd>
-							<dt>감지 옵션</dt>
-							<dd>@DetectionBadges(agent)</dd>
-							<dt>폴링 주기</dt>
-							<dd>{ fmt.Sprintf("%d초", agent.IntervalSeconds) }</dd>
-							<dt>첫 감지 알림</dt>
-							<dd>
+							</p>
+							<p>
+								<b>감지 옵션:</b> @DetectionBadges(agent)
+							</p>
+							<p>
+								<b>폴링 주기:</b> { fmt.Sprintf("%d초", agent.IntervalSeconds) }
+							</p>
+							<p>
+								<b>첫 감지 알림:</b>
 								if agent.AlertOnFirstSeen {
 									<span class="label label-warning">ON</span>
 								} else {
 									<span class="label label-default">OFF</span>
 								}
-							</dd>
-						</dl>
-					</div>
-				</div>
-				<!-- 연결된 웹훅 -->
-				<div class="panel panel-default">
-					<div class="panel-heading">
-						<strong>연결된 웹훅</strong>
-						<a href="/webhooks/new" class="pull-right btn btn-xs btn-default">+ 추가</a>
-					</div>
-					<div class="panel-body">
-						if len(webhooks) == 0 {
-							<p class="text-muted">연결된 웹훅이 없습니다.</p>
-						} else {
-							<ul class="list-unstyled" style="margin-bottom:0;">
-								for _, wh := range webhooks {
-									<li>
-										<span class={ fmt.Sprintf("label label-%s", webhookKindClass(wh.Kind)) }>{ wh.Kind }</span>
-										{ wh.Name }
-									</li>
-								}
-							</ul>
-						}
-					</div>
-				</div>
-			</div>
-			<!-- 실시간 이벤트 로그 -->
-			<div class="col-md-8">
-				<div class="panel panel-default">
-					<div class="panel-heading">
-						<strong><i class="fa fa-list"></i> 실시간 이벤트 로그</strong>
-						<span id="sse-status" class="pull-right text-muted small"></span>
-					</div>
-					<div class="panel-body" style="padding:0;">
-						<div id="event-log" class="event-log-container" data-agent-id={ agent.ID }>
-							if len(events) == 0 {
-								<div id="no-events-msg" class="text-center text-muted" style="padding:20px;">
-									<i class="fa fa-clock"></i> 이벤트 대기 중...
+							</p>
+						</div>
+					<!-- Logs tab -->
+					<div class="tab-pane" id="logs" data-agent-id={ agent.ID }>
+						<div class="row">
+							<div class="col-md-12">
+								<h2>
+									{ agent.Name } Logs
+									<small>
+										<span class="glyphicon glyphicon-refresh action-icon refresh" style="cursor:pointer;margin:0 10px;"></span>
+										<span class="glyphicon glyphicon-trash action-icon clear" style="cursor:pointer;"></span>
+									</small>
+								</h2>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-md-12">
+								<div class="logs">
+									@EventsTable(events)
 								</div>
-							}
-							for _, ev := range events {
-								@EventLogRow(ev)
+							</div>
+						</div>
+					</div>
+						<!-- Webhooks tab -->
+						<div class="tab-pane" id="webhooks">
+							<h2>
+								<i class="fa fa-link"></i> { agent.Name } Webhooks
+								<a href="/webhooks/new" class="btn btn-xs btn-default pull-right" style="margin-top:8px;">+ 추가</a>
+							</h2>
+							if len(webhooks) == 0 {
+								<p class="text-muted">연결된 웹훅이 없습니다.</p>
+							} else {
+								<table class="table table-striped">
+									<thead>
+										<tr>
+											<th>종류</th>
+											<th>이름</th>
+										</tr>
+									</thead>
+									<tbody>
+										for _, wh := range webhooks {
+											<tr>
+												<td><span class={ fmt.Sprintf("label label-%s", webhookKindClass(wh.Kind)) }>{ wh.Kind }</span></td>
+												<td>{ wh.Name }</td>
+											</tr>
+										}
+									</tbody>
+								</table>
 							}
 						</div>
 					</div>
@@ -102,27 +132,55 @@ templ Show(props layouts.PageProps, agent models.Agent, events []models.MonitorE
 	}
 }
 
-templ EventLogRow(ev models.MonitorEvent) {
-	<div class={ fmt.Sprintf("event-row event-row-%s", ev.Status) }>
-		<span class="event-time">{ ev.OccurredAt.Format("15:04:05") }</span>
-		@eventStatusIcon(ev.Status)
-		<span class="event-message">{ ev.Message }</span>
-		if ev.Mode != "" {
-			<span class="label label-default event-mode">{ ev.Mode }</span>
-		}
+templ EventsTable(events []models.MonitorEvent) {
+	<div class="table-responsive">
+		<table id="event-log" class="table table-striped table-row-middle logs">
+			<thead>
+				<tr>
+					<th>메시지</th>
+					<th>시간</th>
+					<th>상태</th>
+				</tr>
+			</thead>
+			<tbody>
+				if len(events) == 0 {
+					<tr id="no-events-msg">
+						<td colspan="3" class="text-center text-muted">
+							<i class="fa fa-clock"></i> 이벤트 대기 중...
+						</td>
+					</tr>
+				}
+				for _, ev := range events {
+					@EventRow(ev)
+				}
+			</tbody>
+		</table>
 	</div>
 }
 
-templ eventStatusIcon(status string) {
+templ EventRow(ev models.MonitorEvent) {
+	<tr class={ fmt.Sprintf("event-row event-row-%s", ev.Status) }>
+		<td>{ truncate(ev.Message, 200) }</td>
+		<td>{ ev.OccurredAt.Format("2006-01-02 15:04:05") }</td>
+		<td>
+			<span class={ fmt.Sprintf("label label-%s", eventStatusClass(ev.Status)) }>{ ev.Status }</span>
+			if ev.Mode != "" {
+				<span class="label label-default event-mode">{ ev.Mode }</span>
+			}
+		</td>
+	</tr>
+}
+
+func eventStatusClass(status string) string {
 	switch status {
 	case "matched":
-		<i class="fa fa-magnifying-glass text-warning"></i>
+		return "warning"
 	case "version_changed":
-		<i class="fa fa-arrow-up text-primary"></i>
+		return "primary"
 	case "error":
-		<i class="fa fa-exclamation-triangle text-danger"></i>
+		return "danger"
 	default:
-		<i class="fa fa-check text-muted"></i>
+		return "default"
 	}
 }
 

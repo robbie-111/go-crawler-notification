@@ -44,7 +44,7 @@ func New(cfg WebhookConfig) (Notifier, error) {
 		if cfg.URL == "" {
 			return nil, fmt.Errorf("slack: webhook URL이 필요합니다")
 		}
-		return &slackNotifier{webhookURL: cfg.URL}, nil
+		return &slackNotifier{webhookURL: cfg.URL, title: cfg.Config["slack_title"]}, nil
 	case KindTelegram:
 		token := cfg.Config["bot_token"]
 		chatID := cfg.Config["chat_id"]
@@ -92,13 +92,82 @@ func formatMessage(event monitor.Event, agentName string) string {
 
 // ─── Slack ────────────────────────────────────────────────
 
+type slackPayload struct {
+	Text        string            `json:"text"`
+	Attachments []slackAttachment `json:"attachments"`
+}
+
+type slackAttachment struct {
+	Color  string       `json:"color"`
+	Title  string       `json:"title,omitempty"`
+	Text   string       `json:"text"`
+	Fields []slackField `json:"fields,omitempty"`
+}
+
+type slackField struct {
+	Title string `json:"title"`
+	Value string `json:"value"`
+	Short bool   `json:"short"`
+}
+
 type slackNotifier struct {
 	webhookURL string
+	title      string
+}
+
+func slackColor(event monitor.Event) string {
+	switch {
+	case event.Err != nil:
+		return "danger"
+	case event.VersionChanged:
+		return "warning"
+	case event.Match:
+		return "warning"
+	default:
+		return "good"
+	}
+}
+
+func buildSlackFields(event monitor.Event, agentName string) []slackField {
+	fields := []slackField{
+		{Title: "Agent", Value: agentName, Short: true},
+	}
+	switch {
+	case event.Err != nil:
+		fields = append(fields,
+			slackField{Title: "URL", Value: event.URL, Short: true},
+			slackField{Title: "오류", Value: event.Err.Error(), Short: false},
+		)
+	case event.VersionChanged:
+		prev := event.VersionPrevious
+		if prev == "" {
+			prev = "(첫 감지)"
+		}
+		fields = append(fields,
+			slackField{Title: "URL", Value: event.URL, Short: true},
+			slackField{Title: "버전 변경", Value: prev + " → " + event.LatestVersion, Short: true},
+		)
+	case event.Match:
+		fields = append(fields,
+			slackField{Title: "URL", Value: event.URL, Short: true},
+			slackField{Title: "키워드", Value: event.Keyword, Short: true},
+		)
+	}
+	return fields
 }
 
 func (s *slackNotifier) Send(event monitor.Event, agentName string) error {
-	msg := formatMessage(event, agentName)
-	payload := map[string]string{"text": msg}
+	payload := slackPayload{
+		Text: agentName + " 알림",
+		Attachments: []slackAttachment{
+			{
+				Color:  slackColor(event),
+				Title:  s.title,
+				Text:   formatMessage(event, agentName),
+				Fields: buildSlackFields(event, agentName),
+			},
+		},
+	}
 	return postJSON(s.webhookURL, payload, nil)
 }
 

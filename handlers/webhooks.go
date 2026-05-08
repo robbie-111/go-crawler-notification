@@ -164,6 +164,9 @@ func webhookFromForm(r *http.Request) (models.Webhook, error) {
 		if webhookURL == "" {
 			return models.Webhook{}, fmt.Errorf("Slack Webhook URL을 입력하세요")
 		}
+		if title := strings.TrimSpace(r.FormValue("slack_title")); title != "" {
+			cfg["slack_title"] = title
+		}
 	case "telegram":
 		token := strings.TrimSpace(r.FormValue("bot_token"))
 		chatID := strings.TrimSpace(r.FormValue("chat_id"))

@@ -3,65 +3,65 @@
 (function() {
   'use strict';
 
-  var container = document.getElementById('event-log');
-  if (!container) return;
+  var table = document.getElementById('event-log');
+  if (!table) return;
 
-  var agentID = container.dataset.agentId;
+  var logsPane = document.getElementById('logs');
+  var agentID = logsPane ? logsPane.dataset.agentId : null;
   if (!agentID) return;
 
-  var sseStatus = document.getElementById('sse-status');
-
-  function setStatus(text, cls) {
-    if (!sseStatus) return;
-    sseStatus.textContent = text;
-    sseStatus.className = 'pull-right small ' + (cls || '');
-  }
-
-  function statusIcon(status) {
+  function statusClass(status) {
     switch (status) {
-      case 'matched':        return '<i class="fa fa-magnifying-glass text-warning"></i>';
-      case 'version_changed': return '<i class="fa fa-arrow-up text-primary"></i>';
-      case 'error':          return '<i class="fa fa-exclamation-triangle text-danger"></i>';
-      default:               return '<i class="fa fa-check text-muted"></i>';
-    }
-  }
-
-  function rowClass(status) {
-    switch (status) {
-      case 'matched':        return 'event-row event-row-matched';
-      case 'version_changed': return 'event-row event-row-version_changed';
-      case 'error':          return 'event-row event-row-error';
-      default:               return 'event-row event-row-checked';
+      case 'matched':         return 'warning';
+      case 'version_changed': return 'primary';
+      case 'error':           return 'danger';
+      default:                return 'default';
     }
   }
 
   function formatTime(iso) {
     try {
       var d = new Date(iso);
-      return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      var pad = function(n) { return n < 10 ? '0' + n : n; };
+      return d.getFullYear() + '-' +
+             pad(d.getMonth() + 1) + '-' +
+             pad(d.getDate()) + ' ' +
+             pad(d.getHours()) + ':' +
+             pad(d.getMinutes()) + ':' +
+             pad(d.getSeconds());
     } catch(e) {
       return iso;
     }
   }
 
+  function truncate(str, max) {
+    if (!str) return '';
+    return str.length > max ? str.slice(0, max) + '…' : str;
+  }
+
   function appendEvent(ev) {
-    // "이벤트 대기 중" 메시지 제거
+    // "이벤트 대기 중" 행 제거
     var noMsg = document.getElementById('no-events-msg');
     if (noMsg) noMsg.remove();
 
-    var row = document.createElement('div');
-    row.className = rowClass(ev.status);
-    row.innerHTML =
-      '<span class="event-time">' + formatTime(ev.occurred_at) + '</span>' +
-      statusIcon(ev.status) +
-      '<span class="event-message">' + escapeHTML(ev.message) + '</span>' +
-      (ev.mode ? '<span class="label label-default event-mode">' + escapeHTML(ev.mode) + '</span>' : '');
+    var tbody = table.querySelector('tbody');
+    if (!tbody) return;
 
-    // 최신 이벤트를 맨 위에 삽입
-    container.insertBefore(row, container.firstChild);
+    var tr = document.createElement('tr');
+    tr.className = 'event-row event-row-' + ev.status;
+    tr.innerHTML =
+      '<td>' + escapeHTML(truncate(ev.message, 200)) + '</td>' +
+      '<td>' + escapeHTML(formatTime(ev.occurred_at)) + '</td>' +
+      '<td>' +
+        '<span class="label label-' + statusClass(ev.status) + '">' + escapeHTML(ev.status) + '</span>' +
+        (ev.mode ? ' <span class="label label-default event-mode">' + escapeHTML(ev.mode) + '</span>' : '') +
+      '</td>';
+
+    // 최신 이벤트를 tbody 맨 위에 삽입
+    tbody.insertBefore(tr, tbody.firstChild);
 
     // 최대 100건 유지
-    var rows = container.querySelectorAll('.event-row');
+    var rows = tbody.querySelectorAll('tr.event-row');
     if (rows.length > 100) {
       rows[rows.length - 1].remove();
     }
@@ -77,17 +77,12 @@
   }
 
   function connect() {
-    setStatus('연결 중...', '');
     var es = new EventSource('/agents/' + agentID + '/events');
-
-    es.onopen = function() {
-      setStatus('● 연결됨', 'connected');
-    };
 
     es.onmessage = function(e) {
       try {
         var data = JSON.parse(e.data);
-        if (data.type === 'connected') return; // 초기 핸드셰이크
+        if (data.type === 'connected') return;
         appendEvent(data);
       } catch(err) {
         console.warn('[SSE] parse error:', err);
@@ -95,7 +90,6 @@
     };
 
     es.onerror = function() {
-      setStatus('● 연결 끊김 (재연결 시도 중...)', 'disconnected');
       es.close();
       setTimeout(connect, 3000);
     };

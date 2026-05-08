@@ -39,16 +39,28 @@ templ webhookForm(props layouts.PageProps, wh models.Webhook, title, action stri
 							</select>
 						</div>
 					</div>
-					<!-- Slack 설정 -->
-					<div id="slack-fields" class="kind-fields">
-						<div class="form-group">
-							<label class="col-sm-3 control-label">Webhook URL <span class="text-danger">*</span></label>
-							<div class="col-sm-9">
-								<input type="url" class="form-control" name="url" value={ wh.URL } placeholder="https://hooks.slack.com/services/..."/>
-								<p class="help-block">Slack 앱의 Incoming Webhook URL을 입력하세요.</p>
-							</div>
+				<!-- Slack 설정 -->
+				<div id="slack-fields" class="kind-fields">
+					<div class="form-group">
+						<label class="col-sm-3 control-label">Webhook URL <span class="text-danger">*</span></label>
+						<div class="col-sm-9">
+							<input type="url" class="form-control" name="url" value={ wh.URL } placeholder="https://hooks.slack.com/services/..."/>
+							<p class="help-block">Slack 앱의 Incoming Webhook URL을 입력하세요.</p>
 						</div>
 					</div>
+					<div class="form-group">
+						<label class="col-sm-3 control-label">Attachment 제목</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control" name="slack_title" value={ wh.Config["slack_title"] } placeholder="예: 모니터링 알림"/>
+							<p class="help-block">
+								메시지 attachment에 표시될 제목 (선택사항).
+								색상은 이벤트 상태에 따라 자동 결정됩니다.
+								(<span class="text-success">●</span> 새 감지: warning &nbsp;
+								<span class="text-danger">●</span> 오류: danger)
+							</p>
+						</div>
+					</div>
+				</div>
 					<!-- Telegram 설정 -->
 					<div id="telegram-fields" class="kind-fields" style="display:none;">
 						<div class="form-group">
