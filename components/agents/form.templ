@@ -98,34 +98,70 @@ templ form(props layouts.PageProps, agent models.Agent, webhooks []models.Webhoo
 								</div>
 							</div>
 						</div>
-						<!-- 알림 설정 탭 -->
-						<div id="tab-notify" class="tab-pane">
-							if len(webhooks) == 0 {
-								<div class="alert alert-warning">
-									<i class="fa fa-exclamation-triangle"></i>
-									등록된 웹훅이 없습니다.
-									<a href="/webhooks/new">웹훅을 먼저 생성</a>하고 연결하세요.
-								</div>
-							} else {
-								<p class="text-muted">이벤트 발생 시 알림을 받을 웹훅을 선택하세요.</p>
+					<!-- 알림 설정 탭 -->
+					<div id="tab-notify" class="tab-pane">
+						if len(webhooks) == 0 {
+							<div class="alert alert-warning">
+								<i class="fa fa-exclamation-triangle"></i>
+								등록된 웹훅이 없습니다.
+								<a href="/webhooks/new">웹훅을 먼저 생성</a>하고 연결하세요.
+							</div>
+						} else {
+							<p class="text-muted">이벤트 발생 시 알림을 받을 웹훅을 선택하세요.</p>
+							<div style="margin-bottom:10px;">
 								for _, wh := range webhooks {
-									<div class="checkbox">
-										<label>
-											if containsID(agent.WebhookIDs, wh.ID) {
-												<input type="checkbox" name="webhook_ids" value={ wh.ID } checked/>
-											} else {
-												<input type="checkbox" name="webhook_ids" value={ wh.ID }/>
-											}
-											<span class={ fmt.Sprintf("label label-%s", webhookKindClass(wh.Kind)) }>{ wh.Kind }</span>
-											{ wh.Name }
+									<div class="webhook-toggle-row">
+										<!-- 숨겨진 체크박스 (폼 제출용) -->
+										if containsID(agent.WebhookIDs, wh.ID) {
+											<input
+												type="checkbox"
+												id={ fmt.Sprintf("wh-%s", wh.ID) }
+												name="webhook_ids"
+												value={ wh.ID }
+												class="webhook-toggle-input"
+												style="display:none;"
+												checked
+											/>
+										} else {
+											<input
+												type="checkbox"
+												id={ fmt.Sprintf("wh-%s", wh.ID) }
+												name="webhook_ids"
+												value={ wh.ID }
+												class="webhook-toggle-input"
+												style="display:none;"
+											/>
+										}
+										<!-- 토글 버튼 -->
+										<label
+											for={ fmt.Sprintf("wh-%s", wh.ID) }
+										class={ webhookToggleClass(containsID(agent.WebhookIDs, wh.ID)) }
+										title={ wh.Name }
+										>
+											<span class="webhook-toggle-track">
+												<span class="webhook-toggle-thumb"></span>
+											</span>
 										</label>
+										<!-- 배지 + 이름 -->
+										<span class={ fmt.Sprintf("label label-%s", webhookKindClass(wh.Kind)) }>
+											if wh.Kind == "slack" {
+												<i class="fa-brands fa-slack"></i>
+											} else if wh.Kind == "telegram" {
+												<i class="fa-brands fa-telegram"></i>
+											} else {
+												<i class="fa fa-link"></i>
+											}
+											{ webhookKindLabel(wh.Kind) }
+										</span>
+										<span>{ wh.Name }</span>
 									</div>
 								}
-							}
-							<p class="text-muted" style="margin-top:10px;">
-								<small><i class="fa fa-info-circle"></i> 알림은 키워드 감지, 새 버전 감지, 오류 발생 시에만 발송됩니다.</small>
-							</p>
-						</div>
+							</div>
+						}
+						<p class="text-muted" style="margin-top:10px;">
+							<small><i class="fa fa-info-circle"></i> 알림은 키워드 감지, 새 버전 감지, 오류 발생 시에만 발송됩니다.</small>
+						</p>
+					</div>
 					</div>
 					<!-- 버튼 -->
 					<div class="form-group" style="margin-top:20px;">
@@ -171,4 +207,22 @@ func containsID(ids []string, id string) bool {
 		}
 	}
 	return false
+}
+
+func webhookToggleClass(checked bool) string {
+	if checked {
+		return "webhook-toggle is-on"
+	}
+	return "webhook-toggle"
+}
+
+func webhookKindLabel(kind string) string {
+	switch kind {
+	case "slack":
+		return "Slack"
+	case "telegram":
+		return "Telegram"
+	default:
+		return "Custom"
+	}
 }

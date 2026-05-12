@@ -44,7 +44,7 @@ func New(cfg WebhookConfig) (Notifier, error) {
 		if cfg.URL == "" {
 			return nil, fmt.Errorf("slack: webhook URL이 필요합니다")
 		}
-		return &slackNotifier{webhookURL: cfg.URL, title: cfg.Config["slack_title"]}, nil
+		return &slackNotifier{webhookURL: cfg.URL}, nil
 	case KindTelegram:
 		token := cfg.Config["bot_token"]
 		chatID := cfg.Config["chat_id"]
@@ -73,20 +73,23 @@ func SendAsync(n Notifier, event monitor.Event, agentName string) {
 
 // formatMessage는 이벤트를 사람이 읽기 좋은 메시지로 변환합니다.
 func formatMessage(event monitor.Event, agentName string) string {
-	ts := event.CheckedAt.Format("2006-01-02 15:04:05")
 	switch {
 	case event.Err != nil:
-		return fmt.Sprintf("[%s] 오류 발생\nAgent: %s\nURL: %s\n오류: %v", ts, agentName, event.URL, event.Err)
+		return fmt.Sprintf("Agent: %s\n오류: %v", agentName, event.Err)
 	case event.VersionChanged && event.LatestVersion != "":
 		prev := event.VersionPrevious
 		if prev == "" {
 			prev = "(첫 감지)"
 		}
-		return fmt.Sprintf("[%s] 새 버전 감지\nAgent: %s\nURL: %s\n버전: %s → %s", ts, agentName, event.URL, prev, event.LatestVersion)
+		msg := fmt.Sprintf("Agent: %s\n버전: %s → %s", agentName, prev, event.LatestVersion)
+		if event.Content != "" {
+			msg += "\n\n" + event.Content
+		}
+		return msg
 	case event.Match:
-		return fmt.Sprintf("[%s] 키워드 감지\nAgent: %s\nURL: %s\n키워드: %q", ts, agentName, event.URL, event.Keyword)
+		return fmt.Sprintf("Agent: %s\n키워드: %q", agentName, event.Keyword)
 	default:
-		return fmt.Sprintf("[%s] 점검 완료\nAgent: %s\nURL: %s", ts, agentName, event.URL)
+		return fmt.Sprintf("Agent: %s", agentName)
 	}
 }
 
@@ -98,10 +101,13 @@ type slackPayload struct {
 }
 
 type slackAttachment struct {
-	Color  string       `json:"color"`
-	Title  string       `json:"title,omitempty"`
-	Text   string       `json:"text"`
-	Fields []slackField `json:"fields,omitempty"`
+	Color     string       `json:"color"`
+	Title     string       `json:"title,omitempty"`
+	TitleLink string       `json:"title_link,omitempty"`
+	Text      string       `json:"text"`
+	Fields    []slackField `json:"fields,omitempty"`
+	Footer    string       `json:"footer,omitempty"`
+	Ts        int64        `json:"ts,omitempty"`
 }
 
 type slackField struct {
@@ -112,7 +118,6 @@ type slackField struct {
 
 type slackNotifier struct {
 	webhookURL string
-	title      string
 }
 
 func slackColor(event monitor.Event) string {
@@ -135,7 +140,6 @@ func buildSlackFields(event monitor.Event, agentName string) []slackField {
 	switch {
 	case event.Err != nil:
 		fields = append(fields,
-			slackField{Title: "URL", Value: event.URL, Short: true},
 			slackField{Title: "오류", Value: event.Err.Error(), Short: false},
 		)
 	case event.VersionChanged:
@@ -144,12 +148,10 @@ func buildSlackFields(event monitor.Event, agentName string) []slackField {
 			prev = "(첫 감지)"
 		}
 		fields = append(fields,
-			slackField{Title: "URL", Value: event.URL, Short: true},
 			slackField{Title: "버전 변경", Value: prev + " → " + event.LatestVersion, Short: true},
 		)
 	case event.Match:
 		fields = append(fields,
-			slackField{Title: "URL", Value: event.URL, Short: true},
 			slackField{Title: "키워드", Value: event.Keyword, Short: true},
 		)
 	}
@@ -157,17 +159,31 @@ func buildSlackFields(event monitor.Event, agentName string) []slackField {
 }
 
 func (s *slackNotifier) Send(event monitor.Event, agentName string) error {
+	var title string
+	switch {
+	case event.VersionChanged && event.LatestVersion != "":
+		title = agentName + " " + event.LatestVersion
+	case event.Match:
+		title = agentName + " 키워드 감지"
+	case event.Err != nil:
+		title = agentName + " 오류"
+	}
+
 	payload := slackPayload{
 		Text: agentName + " 알림",
 		Attachments: []slackAttachment{
 			{
-				Color:  slackColor(event),
-				Title:  s.title,
-				Text:   formatMessage(event, agentName),
-				Fields: buildSlackFields(event, agentName),
+				Color:     slackColor(event),
+				Title:     title,
+				TitleLink: event.URL,
+				Text:      formatMessage(event, agentName),
+				Fields:    buildSlackFields(event, agentName),
+				Footer:    "Crawler Monitor",
+				Ts:        event.CheckedAt.Unix(),
 			},
 		},
 	}
+
 	return postJSON(s.webhookURL, payload, nil)
 }
 
@@ -251,6 +267,15 @@ func postJSON(url string, payload interface{}, headers map[string]string) error 
 	if err != nil {
 		return err
 	}
+
+	// Request 로그 (pretty)
+	var prettyReq bytes.Buffer
+	if err := json.Indent(&prettyReq, b, "", "  "); err == nil {
+		log.Printf("[HTTP_REQUEST]\nPOST %s\nContent-Type: application/json\n\n%s\n", url, prettyReq.String())
+	} else {
+		log.Printf("[HTTP_REQUEST]\nPOST %s\nContent-Type: application/json\n\n%s\n", url, string(b))
+	}
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(b))
 	if err != nil {
@@ -262,11 +287,22 @@ func postJSON(url string, payload interface{}, headers map[string]string) error 
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[HTTP_RESPONSE]\nerror: %v\n", err)
 		return err
 	}
 	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	// Response 로그 (pretty — JSON이면 indent, 아니면 그대로)
+	var prettyResp bytes.Buffer
+	if json.Indent(&prettyResp, body, "", "  ") == nil {
+		log.Printf("[HTTP_RESPONSE]\nStatus: %d %s\nBody:\n%s\n", resp.StatusCode, http.StatusText(resp.StatusCode), prettyResp.String())
+	} else {
+		log.Printf("[HTTP_RESPONSE]\nStatus: %d %s\nBody: %s\n", resp.StatusCode, http.StatusText(resp.StatusCode), string(body))
+	}
+
 	if resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("webhook HTTP %d: %s", resp.StatusCode, string(body))
 	}
 	return nil

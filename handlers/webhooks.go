@@ -129,9 +129,17 @@ func WebhooksTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	testEvent := monitor.Event{
-		Status:    "checked",
-		URL:       "https://example.com/changelog",
-		Keyword:   "test",
+		Status:          "version_changed",
+		URL:             "https://docs.digitalturbine.com/dt-exchange/publishers/sdk-configuration/integrating-the-ios-sdk/dt-exchange-ios-changelog",
+		VersionChanged:  true,
+		LatestVersion:   "8.4.7",
+		VersionPrevious: "8.4.6",
+		Content: `New:
+- Added Support for SKOverlay in Embedded Browser
+- Added support for Vietnam's Amended Law on Advertising
+
+Fixed:
+- Stability and bug fixes`,
 		CheckedAt: time.Now(),
 	}
 
@@ -163,9 +171,6 @@ func webhookFromForm(r *http.Request) (models.Webhook, error) {
 		webhookURL = strings.TrimSpace(r.FormValue("url"))
 		if webhookURL == "" {
 			return models.Webhook{}, fmt.Errorf("Slack Webhook URL을 입력하세요")
-		}
-		if title := strings.TrimSpace(r.FormValue("slack_title")); title != "" {
-			cfg["slack_title"] = title
 		}
 	case "telegram":
 		token := strings.TrimSpace(r.FormValue("bot_token"))

@@ -23,8 +23,12 @@ func AgentsIndex(w http.ResponseWriter, r *http.Request) {
 	for _, a := range agents {
 		runningIDs[a.ID] = isRunning(a.ID)
 	}
+	webhookMap := map[string]models.Webhook{}
+	for _, wh := range WebhookStore.All() {
+		webhookMap[wh.ID] = wh
+	}
 	props := makeProps(w, r, "Agents")
-	agentComponents.Index(props, agents, runningIDs).Render(r.Context(), w)
+	agentComponents.Index(props, agents, runningIDs, webhookMap).Render(r.Context(), w)
 }
 
 func AgentsNew(w http.ResponseWriter, r *http.Request) {

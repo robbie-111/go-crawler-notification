@@ -6,7 +6,7 @@ import (
 	"go-crawler-notification/models"
 )
 
-templ Index(props layouts.PageProps, agents []models.Agent, runningIDs map[string]bool) {
+templ Index(props layouts.PageProps, agents []models.Agent, runningIDs map[string]bool, webhooks map[string]models.Webhook) {
 	@layouts.Base(props) {
 		<div class="page-header">
 			<h1>
@@ -30,16 +30,14 @@ templ Index(props layouts.PageProps, agents []models.Agent, runningIDs map[strin
 							<th>이름</th>
 							<th>URL</th>
 							<th>키워드</th>
-							<th>감지 옵션</th>
 							<th>주기</th>
-							<th>웹훅</th>
 							<th>상태</th>
 							<th>액션</th>
 						</tr>
 					</thead>
 					<tbody>
 						for _, agent := range agents {
-							@AgentRow(agent, runningIDs[agent.ID])
+							@AgentRow(agent, runningIDs[agent.ID], webhooks)
 						}
 					</tbody>
 				</table>
@@ -48,12 +46,15 @@ templ Index(props layouts.PageProps, agents []models.Agent, runningIDs map[strin
 	}
 }
 
-templ AgentRow(agent models.Agent, running bool) {
+templ AgentRow(agent models.Agent, running bool, webhooks map[string]models.Webhook) {
 	<tr>
 		<td>
 			<a href={ templ.URL(fmt.Sprintf("/agents/%s", agent.ID)) }>
 				<strong>{ agent.Name }</strong>
 			</a>
+			<br/>
+			@DetectionBadges(agent)
+			@SlackBadges(agent, webhooks)
 		</td>
 		<td>
 			<small class="text-muted" title={ agent.URL }>
@@ -68,13 +69,7 @@ templ AgentRow(agent models.Agent, running bool) {
 			}
 		</td>
 		<td>
-			@DetectionBadges(agent)
-		</td>
-		<td>
 			<small>{ fmt.Sprintf("%ds", agent.IntervalSeconds) }</small>
-		</td>
-		<td>
-			<small class="text-muted">{ fmt.Sprintf("%d개", len(agent.WebhookIDs)) }</small>
 		</td>
 		<td>
 			@StatusBadge(running)
@@ -96,6 +91,21 @@ templ DetectionBadges(agent models.Agent) {
 	}
 	if agent.EnableVersion {
 		<span class="label label-primary">버전</span>
+	}
+}
+
+templ SlackBadges(agent models.Agent, webhooks map[string]models.Webhook) {
+	for _, wid := range agent.WebhookIDs {
+		if wh, ok := webhooks[wid]; ok && wh.Kind == "slack" {
+			<a
+				href={ templ.URL(fmt.Sprintf("/webhooks/%s/edit", wh.ID)) }
+				class="label"
+				style="background-color:#4A154B;color:#fff;margin-left:2px;"
+				title={ wh.URL }
+			>
+				<i class="fa-brands fa-slack"></i> { wh.Name }
+			</a>
+		}
 	}
 }
 

@@ -187,100 +187,87 @@ func webhookForm(props layouts.PageProps, wh models.Webhook, title, action strin
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" placeholder=\"https://hooks.slack.com/services/...\"><p class=\"help-block\">Slack 앱의 Incoming Webhook URL을 입력하세요.</p></div></div><div class=\"form-group\"><label class=\"col-sm-3 control-label\">Attachment 제목</label><div class=\"col-sm-9\"><input type=\"text\" class=\"form-control\" name=\"slack_title\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" placeholder=\"https://hooks.slack.com/services/...\"><p class=\"help-block\">Slack 앱의 Incoming Webhook URL을 입력하세요.</p></div></div></div><!-- Telegram 설정 --><div id=\"telegram-fields\" class=\"kind-fields\" style=\"display:none;\"><div class=\"form-group\"><label class=\"col-sm-3 control-label\">Bot Token <span class=\"text-danger\">*</span></label><div class=\"col-sm-9\"><input type=\"text\" class=\"form-control\" name=\"bot_token\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["slack_title"])
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["bot_token"])
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 54, Col: 98}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 58, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" placeholder=\"예: 모니터링 알림\"><p class=\"help-block\">메시지 attachment에 표시될 제목 (선택사항). 색상은 이벤트 상태에 따라 자동 결정됩니다. (<span class=\"text-success\">●</span> 새 감지: warning &nbsp; <span class=\"text-danger\">●</span> 오류: danger)</p></div></div></div><!-- Telegram 설정 --><div id=\"telegram-fields\" class=\"kind-fields\" style=\"display:none;\"><div class=\"form-group\"><label class=\"col-sm-3 control-label\">Bot Token <span class=\"text-danger\">*</span></label><div class=\"col-sm-9\"><input type=\"text\" class=\"form-control\" name=\"bot_token\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" placeholder=\"123456:ABC-DEF...\"><p class=\"help-block\">BotFather에서 받은 토큰.</p></div></div><div class=\"form-group\"><label class=\"col-sm-3 control-label\">Chat ID <span class=\"text-danger\">*</span></label><div class=\"col-sm-9\"><input type=\"text\" class=\"form-control\" name=\"chat_id\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["bot_token"])
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["chat_id"])
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 69, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 65, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" placeholder=\"123456:ABC-DEF...\"><p class=\"help-block\">BotFather에서 받은 토큰.</p></div></div><div class=\"form-group\"><label class=\"col-sm-3 control-label\">Chat ID <span class=\"text-danger\">*</span></label><div class=\"col-sm-9\"><input type=\"text\" class=\"form-control\" name=\"chat_id\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" placeholder=\"-1001234567890\"><p class=\"help-block\">그룹 Chat ID 또는 개인 user_id.</p></div></div></div><!-- Custom 설정 --><div id=\"custom-fields\" class=\"kind-fields\" style=\"display:none;\"><div class=\"form-group\"><label class=\"col-sm-3 control-label\">URL <span class=\"text-danger\">*</span></label><div class=\"col-sm-9\"><input type=\"url\" class=\"form-control\" name=\"url\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var11 string
-			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["chat_id"])
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(wh.URL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 76, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 75, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" placeholder=\"-1001234567890\"><p class=\"help-block\">그룹 Chat ID 또는 개인 user_id.</p></div></div></div><!-- Custom 설정 --><div id=\"custom-fields\" class=\"kind-fields\" style=\"display:none;\"><div class=\"form-group\"><label class=\"col-sm-3 control-label\">URL <span class=\"text-danger\">*</span></label><div class=\"col-sm-9\"><input type=\"url\" class=\"form-control\" name=\"url\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" placeholder=\"https://your-service.com/webhook\"></div></div><div class=\"form-group\"><label class=\"col-sm-3 control-label\">헤더 (JSON)</label><div class=\"col-sm-9\"><textarea class=\"form-control\" name=\"headers\" rows=\"3\" placeholder='{\"Authorization\": \"Bearer token\"}'>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var12 string
-			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(wh.URL)
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["headers"])
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 86, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 81, Col: 133}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\" placeholder=\"https://your-service.com/webhook\"></div></div><div class=\"form-group\"><label class=\"col-sm-3 control-label\">헤더 (JSON)</label><div class=\"col-sm-9\"><textarea class=\"form-control\" name=\"headers\" rows=\"3\" placeholder='{\"Authorization\": \"Bearer token\"}'>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</textarea><p class=\"help-block\">추가 HTTP 헤더를 JSON 형태로 입력 (선택사항).</p></div></div><div class=\"form-group\"><label class=\"col-sm-3 control-label\">바디 템플릿</label><div class=\"col-sm-9\"><textarea class=\"form-control\" name=\"body_template\" rows=\"4\" placeholder='{\"text\": \"{{message}}\"}'>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var13 string
-			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["headers"])
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["body_template"])
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 92, Col: 133}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 88, Col: 135}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</textarea><p class=\"help-block\">추가 HTTP 헤더를 JSON 형태로 입력 (선택사항).</p></div></div><div class=\"form-group\"><label class=\"col-sm-3 control-label\">바디 템플릿</label><div class=\"col-sm-9\"><textarea class=\"form-control\" name=\"body_template\" rows=\"4\" placeholder='{\"text\": \"{{message}}\"}'>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var14 string
-			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(wh.Config["body_template"])
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `components/webhooks/form.templ`, Line: 99, Col: 135}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</textarea><p class=\"help-block\">사용 가능한 변수: <code>&#123;&#123;message&#125;&#125;</code> <code>&#123;&#123;agent&#125;&#125;</code> <code>&#123;&#123;url&#125;&#125;</code> <code>&#123;&#123;version&#125;&#125;</code> <code>&#123;&#123;keyword&#125;&#125;</code></p></div></div></div><!-- 버튼 --><div class=\"form-group\" style=\"margin-top:20px;\"><div class=\"col-sm-offset-3 col-sm-9\"><button type=\"submit\" class=\"btn btn-primary\"><i class=\"fa fa-save\"></i> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</textarea><p class=\"help-block\">사용 가능한 변수: <code>&#123;&#123;message&#125;&#125;</code> <code>&#123;&#123;agent&#125;&#125;</code> <code>&#123;&#123;url&#125;&#125;</code> <code>&#123;&#123;version&#125;&#125;</code> <code>&#123;&#123;keyword&#125;&#125;</code></p></div></div></div><!-- 버튼 --><div class=\"form-group\" style=\"margin-top:20px;\"><div class=\"col-sm-offset-3 col-sm-9\"><button type=\"submit\" class=\"btn btn-primary\"><i class=\"fa fa-save\"></i> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if isEdit {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "저장")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "저장")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "생성")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "생성")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</button> <a href=\"/webhooks\" class=\"btn btn-default\">취소</a></div></div></form></div></div><script>\n\t\t\t$(function() {\n\t\t\t\tfunction showKindFields() {\n\t\t\t\t\tvar kind = $('#webhook-kind').val();\n\t\t\t\t\t$('.kind-fields').hide();\n\t\t\t\t\t$('#' + kind + '-fields').show();\n\t\t\t\t}\n\t\t\t\t$('#webhook-kind').on('change', showKindFields);\n\t\t\t\tshowKindFields();\n\t\t\t});\n\t\t</script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</button> <a href=\"/webhooks\" class=\"btn btn-default\">취소</a></div></div></form></div></div><script>\n\t\t\t$(function() {\n\t\t\t\tfunction showKindFields() {\n\t\t\t\t\tvar kind = $('#webhook-kind').val();\n\t\t\t\t\t$('.kind-fields').hide();\n\t\t\t\t\t$('#' + kind + '-fields').show();\n\t\t\t\t}\n\t\t\t\t$('#webhook-kind').on('change', showKindFields);\n\t\t\t\tshowKindFields();\n\t\t\t});\n\t\t</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
