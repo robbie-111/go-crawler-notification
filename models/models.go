@@ -7,6 +7,7 @@ type Agent struct {
 	ID               string    `json:"id"`
 	Name             string    `json:"name"`
 	URL              string    `json:"url"`
+	LinkURL          string    `json:"link_url,omitempty"` // 슬랙 알림 링크 URL (선택). 비어있으면 URL 사용.
 	Keyword          string    `json:"keyword"`
 	EnableKeyword    bool      `json:"enable_keyword"`
 	EnableVersion    bool      `json:"enable_version"`
@@ -44,6 +45,17 @@ type MonitorEvent struct {
 	VersionError    string    `json:"version_error"`
 	Err             string    `json:"error,omitempty"`
 	OccurredAt      time.Time `json:"occurred_at"`
+}
+
+// SystemLog는 크롤링/알림 과정에서 발생하는 시스템 운영 로그입니다.
+// logs/{agentID}.json 에 영속 저장됩니다.
+type SystemLog struct {
+	AgentID    string    `json:"agent_id"`
+	AgentName  string    `json:"agent_name"`
+	Level      string    `json:"level"`   // "info" | "warn" | "error"
+	Tag        string    `json:"tag"`     // "FIRST_SEEN_VERSION" | "NEW_VERSION" | "HTTP_REQUEST" 등
+	Message    string    `json:"message"`
+	OccurredAt time.Time `json:"occurred_at"`
 }
 
 // FlashMessage는 페이지 간 플래시 메시지입니다.

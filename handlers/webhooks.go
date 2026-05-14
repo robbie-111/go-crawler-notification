@@ -116,10 +116,17 @@ func WebhooksTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 테스트 발송: Block Kit 활성화 (롤백 시 "use_blocks" 제거)
+	testConfig := make(map[string]string, len(wh.Config)+1)
+	for k, v := range wh.Config {
+		testConfig[k] = v
+	}
+	testConfig["use_blocks"] = "true"
+
 	cfg := notify.WebhookConfig{
 		Kind:   notify.WebhookKind(wh.Kind),
 		URL:    wh.URL,
-		Config: wh.Config,
+		Config: testConfig,
 	}
 	n, err := notify.New(cfg)
 	if err != nil {

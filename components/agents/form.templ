@@ -36,13 +36,24 @@ templ form(props layouts.PageProps, agent models.Agent, webhooks []models.Webhoo
 									<input type="text" class="form-control" name="name" value={ agent.Name } placeholder="예: Unity Localization 버전 감시" required/>
 								</div>
 							</div>
-							<div class="form-group">
-								<label class="col-sm-3 control-label">모니터링 URL <span class="text-danger">*</span></label>
-								<div class="col-sm-9">
-									<input type="url" class="form-control" name="url" value={ agent.URL } placeholder="https://example.com/changelog" required/>
-									<p class="help-block">GitHub blob URL은 자동으로 raw URL로 변환됩니다.</p>
-								</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label">모니터링 URL <span class="text-danger">*</span></label>
+							<div class="col-sm-9">
+								<input type="url" class="form-control" name="url" value={ agent.URL } placeholder="https://example.com/changelog" required/>
+								<p class="help-block">GitHub blob URL은 자동으로 raw URL로 변환됩니다.</p>
 							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-3 control-label">링크 URL</label>
+							<div class="col-sm-9">
+								<input type="url" class="form-control" name="link_url" value={ agent.LinkURL } placeholder="https://docs.example.com/changelog"/>
+								<p class="help-block">
+									슬랙 알림의 "변경 내역 보기" 링크로 사용됩니다.
+									비워두면 모니터링 URL이 사용됩니다.
+									모니터링 URL과 공식 릴리즈노트 URL이 다를 때 설정하세요.
+								</p>
+							</div>
+						</div>
 							<div class="form-group">
 								<label class="col-sm-3 control-label">폴링 주기 (초)</label>
 								<div class="col-sm-9">

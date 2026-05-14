@@ -69,8 +69,15 @@ func AgentsShow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events := EventLog.ByAgent(id)
+	// 시스템 로그 (LogStore에서 읽음)
+	var syslogs []models.SystemLog
+	if LogStore != nil {
+		syslogs = LogStore.ByAgent(id)
+	}
 	running := isRunning(id)
+
+	// SSE 탭 표시용 메모리 이벤트 로그
+	events := EventLog.ByAgent(id)
 
 	// 연결된 웹훅 목록
 	allWebhooks := WebhookStore.All()
@@ -87,7 +94,7 @@ func AgentsShow(w http.ResponseWriter, r *http.Request) {
 
 	props := makeProps(w, r, agent.Name)
 	props.LoadSSE = true
-	agentComponents.Show(props, agent, events, running, connectedWebhooks).Render(r.Context(), w)
+	agentComponents.Show(props, agent, events, syslogs, running, connectedWebhooks).Render(r.Context(), w)
 }
 
 func AgentsEdit(w http.ResponseWriter, r *http.Request) {
@@ -234,6 +241,28 @@ func AgentsEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// AgentsLogsIndex는 SystemLogsTable HTML partial을 반환합니다 (AJAX 새로고침용).
+func AgentsLogsIndex(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var syslogs []models.SystemLog
+	if LogStore != nil {
+		syslogs = LogStore.ByAgent(id)
+	}
+	agentComponents.SystemLogsTable(syslogs).Render(r.Context(), w)
+}
+
+// AgentsLogsClear는 해당 에이전트의 시스템 로그를 삭제하고 빈 테이블 HTML을 반환합니다.
+func AgentsLogsClear(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if LogStore != nil {
+		if err := LogStore.ClearAgent(id); err != nil {
+			http.Error(w, "로그 삭제 실패: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	agentComponents.SystemLogsTable([]models.SystemLog{}).Render(r.Context(), w)
+}
+
 // AgentsStatus는 에이전트 실행 상태를 JSON으로 반환합니다.
 func AgentsStatus(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -259,6 +288,13 @@ func agentFromForm(form url.Values) (models.Agent, error) {
 		return models.Agent{}, fmt.Errorf("유효한 URL이 아닙니다")
 	}
 
+	linkURL := strings.TrimSpace(form.Get("link_url"))
+	if linkURL != "" {
+		if _, err := url.ParseRequestURI(linkURL); err != nil {
+			return models.Agent{}, fmt.Errorf("링크 URL이 유효하지 않습니다")
+		}
+	}
+
 	enableKeyword := form.Get("enable_keyword") == "1"
 	enableVersion := form.Get("enable_version") == "1"
 	if !enableKeyword && !enableVersion {
@@ -280,6 +316,7 @@ func agentFromForm(form url.Values) (models.Agent, error) {
 	return models.Agent{
 		Name:             name,
 		URL:              rawURL,
+		LinkURL:          linkURL,
 		Keyword:          keyword,
 		EnableKeyword:    enableKeyword,
 		EnableVersion:    enableVersion,

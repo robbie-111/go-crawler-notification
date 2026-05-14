@@ -18,6 +18,7 @@ type Event struct {
 	Mode            string
 	Content         string
 	URL             string
+	LinkURL         string // 슬랙 알림 title_link용 URL (비어있으면 URL 사용)
 	NormalizedURL   string
 	Keyword         string
 	CheckedAt       time.Time
@@ -33,7 +34,13 @@ type Options struct {
 	EnableKeywordAlert bool
 	EnableVersionAlert bool
 	AlertOnFirstSeen   bool
+	LinkURL            string // 슬랙 알림 title_link용 URL (선택)
 }
+
+// LogFn은 시스템 로그를 외부에 기록하기 위한 콜백 함수 타입입니다.
+// tag: "FIRST_SEEN_VERSION" | "NEW_VERSION" | "VERSION_LOWER" 등
+// level: "info" | "warn" | "error"
+type LogFn = func(tag, level, message string)
 
 type Runner struct {
 	mu       sync.Mutex
@@ -41,10 +48,25 @@ type Runner struct {
 	cancel   context.CancelFunc
 	interval time.Duration
 	store    *state.Store
+	logFn    LogFn // 시스템 로그 콜백 (nil이면 log.Printf만 사용)
 }
 
 func NewRunner(interval time.Duration, store *state.Store) *Runner {
 	return &Runner{interval: interval, store: store}
+}
+
+// SetLogFn은 시스템 로그 콜백을 등록합니다. Start() 호출 전에 설정해야 합니다.
+func (r *Runner) SetLogFn(fn LogFn) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.logFn = fn
+}
+
+func (r *Runner) syslog(tag, level, message string) {
+	log.Printf("[%s] %s", tag, message)
+	if r.logFn != nil {
+		r.logFn(tag, level, message)
+	}
 }
 
 func (r *Runner) Start(rawURL, keyword string, options Options, onEvent func(Event)) error {
@@ -99,7 +121,7 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 			return
 		}
 
-		event := Event{Status: "checked", Mode: string(result.Mode), Content: result.Content, URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt}
+		event := Event{Status: "checked", Mode: string(result.Mode), Content: result.Content, URL: rawURL, LinkURL: options.LinkURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt}
 
 		if options.EnableKeywordAlert {
 			matched := strings.Contains(strings.ToLower(result.Content), normalizedKeyword)
@@ -122,32 +144,42 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 			latestVersion, versionErr := version.ExtractLatest(result.Content)
 			if versionErr != nil {
 				event.VersionError = versionErr.Error()
-				log.Printf("[VERSION_PARSE_FAILED][%s] url=%s normalized=%s reason=%v", result.Mode, rawURL, result.NormalizedURL, versionErr)
+				r.syslog("VERSION_PARSE_FAILED", "warn",
+					fmt.Sprintf("url=%s mode=%s reason=%v", result.NormalizedURL, result.Mode, versionErr))
 			} else {
 				event.LatestVersion = latestVersion
 				previous, ok := r.store.Get(result.NormalizedURL)
 				if !ok || previous.LastSeenVersion == "" {
+					// 최초 감지 — 저장 후 AlertOnFirstSeen 설정 시에만 알림
 					if options.AlertOnFirstSeen {
-						log.Printf("[FIRST_SEEN_VERSION] %s version=%s", result.NormalizedURL, latestVersion)
+						r.syslog("FIRST_SEEN_VERSION", "info",
+							fmt.Sprintf("url=%s version=%s", result.NormalizedURL, latestVersion))
 						event.VersionChanged = true
 					}
 					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
 						onEvent(Event{Status: "error", URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
 						return
 					}
-				} else if previous.LastSeenVersion != latestVersion {
+				} else if cmp := version.Compare(latestVersion, previous.LastSeenVersion); cmp > 0 {
+					// 더 높은 버전 감지 → 알림 + 저장
 					event.VersionChanged = true
 					event.VersionPrevious = previous.LastSeenVersion
-					log.Printf("[NEW_VERSION] %s 새 버전 감지: %s (이전: %s)", result.NormalizedURL, latestVersion, previous.LastSeenVersion)
+					r.syslog("NEW_VERSION", "info",
+						fmt.Sprintf("url=%s %s → %s", result.NormalizedURL, previous.LastSeenVersion, latestVersion))
+					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
+						onEvent(Event{Status: "error", URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
+						return
+					}
+				} else if cmp == 0 {
+					// 동일 버전 — LastCheckedAt만 갱신, 알림 없음
 					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
 						onEvent(Event{Status: "error", URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
 						return
 					}
 				} else {
-					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
-						onEvent(Event{Status: "error", URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
-						return
-					}
+					// 낮은 버전 감지 — 저장하지 않고 기록
+					r.syslog("VERSION_LOWER", "warn",
+						fmt.Sprintf("url=%s 감지=%q 저장=%q — 무시", result.NormalizedURL, latestVersion, previous.LastSeenVersion))
 				}
 			}
 		}

@@ -35,8 +35,10 @@ func New() http.Handler {
 	r.Post("/agents/{id}/start", handlers.AgentsStart)
 	r.Post("/agents/{id}/stop", handlers.AgentsStop)
 	r.Post("/agents/{id}/delete", handlers.AgentsDelete)
-	r.Get("/agents/{id}/events", handlers.AgentsEvents) // SSE 스트림
-	r.Get("/agents/{id}/status", handlers.AgentsStatus) // JSON 상태
+	r.Get("/agents/{id}/logs", handlers.AgentsLogsIndex)        // AJAX partial
+	r.Post("/agents/{id}/logs/clear", handlers.AgentsLogsClear)  // 로그 삭제
+	r.Get("/agents/{id}/events", handlers.AgentsEvents)   // SSE 스트림
+	r.Get("/agents/{id}/status", handlers.AgentsStatus)   // JSON 상태
 
 	// ─── Events ────────────────────────────────────────────────
 	r.Get("/events", handlers.EventsIndex)

@@ -24,6 +24,7 @@ var (
 	WebhookStore *store.WebhookStore
 	MonitorStore *state.Store
 	EventLog     *store.EventLog
+	LogStore     *store.LogStore
 
 	runnersMu sync.RWMutex
 	runners   = map[string]*monitor.Runner{}
@@ -55,6 +56,13 @@ func InitStores() {
 	}
 
 	EventLog = store.NewEventLog(500)
+
+	ls, err := store.NewLogStore("logs")
+	if err != nil {
+		log.Printf("log store init failed: %v", err)
+	} else {
+		LogStore = ls
+	}
 }
 
 // ─── Runner 관리 ──────────────────────────────────────────────────────────────
@@ -76,10 +84,13 @@ func startRunner(agent models.Agent) error {
 	}
 
 	r := monitor.NewRunner(interval, MonitorStore)
+	r.SetLogFn(syslogFn(agent.ID, agent.Name))
+
 	options := monitor.Options{
 		EnableKeywordAlert: agent.EnableKeyword,
 		EnableVersionAlert: agent.EnableVersion,
 		AlertOnFirstSeen:   agent.AlertOnFirstSeen,
+		LinkURL:            agent.LinkURL,
 	}
 
 	if err := r.Start(agent.URL, agent.Keyword, options, func(event monitor.Event) {
@@ -110,10 +121,32 @@ func isRunning(agentID string) bool {
 	return ok && r.IsRunning()
 }
 
+// syslogFn은 에이전트 ID/Name을 바인딩한 LogStore 기록 함수를 반환합니다.
+func syslogFn(agentID, agentName string) notify.LogFn {
+	return func(tag, level, message string) {
+		if LogStore == nil {
+			return
+		}
+		sl := models.SystemLog{
+			AgentID:    agentID,
+			AgentName:  agentName,
+			Level:      level,
+			Tag:        tag,
+			Message:    message,
+			OccurredAt: time.Now(),
+		}
+		if err := LogStore.Add(sl); err != nil {
+			log.Printf("[LOG_STORE] agent=%s err=%v", agentName, err)
+		}
+	}
+}
+
 // handleEvent는 모니터 이벤트를 처리합니다: 로그 기록 + SSE 브로드캐스트 + 웹훅 발송.
 func handleEvent(agent models.Agent, event monitor.Event) {
 	// 모델로 변환
 	me := toMonitorEvent(agent, event)
+
+	// 메모리 링버퍼 (SSE 실시간용 — checked 포함 모든 이벤트)
 	EventLog.Add(me)
 
 	// SSE 브로드캐스트
@@ -125,6 +158,7 @@ func handleEvent(agent models.Agent, event monitor.Event) {
 		event.Match
 
 	if shouldNotify && len(agent.WebhookIDs) > 0 {
+		logFn := syslogFn(agent.ID, agent.Name)
 		webhooks := WebhookStore.All()
 		webhookMap := make(map[string]models.Webhook, len(webhooks))
 		for _, w := range webhooks {
@@ -142,10 +176,13 @@ func handleEvent(agent models.Agent, event monitor.Event) {
 			}
 			n, err := notify.New(cfg)
 			if err != nil {
-				log.Printf("[NOTIFY_CFG_ERROR] agent=%s webhook=%s err=%v", agent.Name, wh.Name, err)
+				msg := fmt.Sprintf("agent=%s webhook=%s err=%v", agent.Name, wh.Name, err)
+				log.Printf("[NOTIFY_CFG_ERROR] %s", msg)
+				logFn("NOTIFY_CFG_ERROR", "error", msg)
 				continue
 			}
-			notify.SendAsync(n, event, agent.Name)
+			n.SetLogFn(logFn)
+			notify.SendAsync(n, event, agent.Name, logFn)
 		}
 	}
 }
