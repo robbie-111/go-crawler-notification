@@ -24,6 +24,29 @@ func findAvailablePort(start, end int) (int, error) {
 	return 0, fmt.Errorf("no available port in range %d-%d", start, end)
 }
 
+func localIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok || ipNet.IP.IsLoopback() {
+			continue
+		}
+
+		ip := ipNet.IP.To4()
+		if ip == nil {
+			continue
+		}
+
+		return ip.String()
+	}
+
+	return ""
+}
+
 func main() {
 	// 저장소 초기화
 	handlers.InitStores()
@@ -39,8 +62,17 @@ func main() {
 		port = strconv.Itoa(p)
 	}
 
-	addr := ":" + port
-	log.Printf("Crawler Monitor starting on http://localhost%s", addr)
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
+	addr := net.JoinHostPort(host, port)
+	log.Printf("Crawler Monitor starting on http://%s", addr)
+	log.Printf("Local access: http://localhost:%s", port)
+	if ip := localIP(); ip != "" {
+		log.Printf("Network access: http://%s", net.JoinHostPort(ip, port))
+	}
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}

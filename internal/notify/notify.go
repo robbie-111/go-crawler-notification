@@ -267,12 +267,8 @@ func buildBlockFields(event monitor.Event, agentName string) []slackText {
 			slackText{Type: "mrkdwn", Text: "*오류*\n" + event.Err.Error()},
 		)
 	case event.VersionChanged:
-		prev := event.VersionPrevious
-		if prev == "" {
-			prev = "(첫 감지)"
-		}
 		fields = append(fields,
-			slackText{Type: "mrkdwn", Text: "*버전 변경*\n" + prev + " → " + event.LatestVersion},
+			slackText{Type: "mrkdwn", Text: "*버전*\n" + event.LatestVersion},
 		)
 	case event.Match:
 		fields = append(fields,

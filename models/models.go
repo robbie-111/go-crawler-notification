@@ -4,19 +4,17 @@ import "time"
 
 // Agent는 하나의 모니터링 단위입니다.
 type Agent struct {
-	ID               string    `json:"id"`
-	Name             string    `json:"name"`
-	URL              string    `json:"url"`
-	LinkURL          string    `json:"link_url,omitempty"` // 슬랙 알림 링크 URL (선택). 비어있으면 URL 사용.
-	Keyword          string    `json:"keyword"`
-	EnableKeyword    bool      `json:"enable_keyword"`
-	EnableVersion    bool      `json:"enable_version"`
-	AlertOnFirstSeen bool      `json:"alert_on_first_seen"`
-	IntervalSeconds  int       `json:"interval_seconds"`
-	WebhookIDs       []string  `json:"webhook_ids"`
-	Enabled          bool      `json:"enabled"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	URL             string    `json:"url"`
+	LinkURL         string    `json:"link_url,omitempty"` // 슬랙 알림 링크 URL (선택). 비어있으면 URL 사용.
+	Keyword         string    `json:"keyword"`
+	EnableKeyword   bool      `json:"enable_keyword"`
+	IntervalSeconds int       `json:"interval_seconds"`
+	WebhookIDs      []string  `json:"webhook_ids"`
+	Enabled         bool      `json:"enabled"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // Webhook은 알림 수신 채널 설정입니다.
@@ -52,8 +50,8 @@ type MonitorEvent struct {
 type SystemLog struct {
 	AgentID    string    `json:"agent_id"`
 	AgentName  string    `json:"agent_name"`
-	Level      string    `json:"level"`   // "info" | "warn" | "error"
-	Tag        string    `json:"tag"`     // "FIRST_SEEN_VERSION" | "NEW_VERSION" | "HTTP_REQUEST" 등
+	Level      string    `json:"level"` // "info" | "warn" | "error"
+	Tag        string    `json:"tag"`   // "FIRST_SEEN_VERSION" | "NEW_VERSION" | "HTTP_REQUEST" 등
 	Message    string    `json:"message"`
 	OccurredAt time.Time `json:"occurred_at"`
 }

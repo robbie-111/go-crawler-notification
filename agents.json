@@ -1,32 +1,90 @@
 [
   {
-    "id": "7d3716f9-8864-494a-b3bf-47e8171d0d00",
-    "name": "AppLovin Max SDK Android Fyber",
-    "url": "https://github.com/AppLovin/AppLovin-MAX-SDK-Android/blob/master/Fyber/CHANGELOG.md",
+    "id": "ae382223-0588-41af-8d60-d29ad9fbf107",
+    "name": "Unity Mobile Notifications",
+    "url": "https://packages.unity.com/com.unity.mobile.notifications",
     "keyword": "",
     "enable_keyword": false,
-    "enable_version": true,
-    "alert_on_first_seen": true,
     "interval_seconds": 60,
     "webhook_ids": [
       "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
     ],
     "enabled": true,
-    "created_at": "2026-04-17T19:38:30.839083+09:00",
-    "updated_at": "2026-05-08T20:17:06.16708+09:00"
+    "created_at": "2026-04-24T14:29:41.719226+09:00",
+    "updated_at": "2026-05-14T18:45:55.604257+09:00"
   },
   {
-    "id": "ae382223-0588-41af-8d60-d29ad9fbf107",
-    "name": "Unity Mobile Notificaitons",
-    "url": "https://docs.unity3d.com/Packages/com.unity.mobile.notifications@2.4/changelog/CHANGELOG.html",
+    "id": "e7849e5a-8ee7-4ae4-87e5-ba7693e25f48",
+    "name": "DT Exchange Android(Fyber)",
+    "url": "https://docs.digitalturbine.com/dt-exchange/publishers/sdk-configuration/integrating-the-android-sdk/dt-exchange-android-changelog.md",
+    "link_url": "https://docs.digitalturbine.com/dt-exchange/publishers/sdk-configuration/integrating-the-android-sdk/dt-exchange-android-changelog",
     "keyword": "",
     "enable_keyword": false,
-    "enable_version": true,
-    "alert_on_first_seen": false,
     "interval_seconds": 60,
-    "webhook_ids": null,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
     "enabled": true,
-    "created_at": "2026-04-24T14:29:41.719226+09:00",
-    "updated_at": "2026-05-08T20:02:15.28098+09:00"
+    "created_at": "2026-05-14T15:34:54.991952+09:00",
+    "updated_at": "2026-05-14T17:16:09.674463+09:00"
+  },
+  {
+    "id": "f9590fbb-1520-4161-b570-55fb66fd3195",
+    "name": "DT Exchange iOS(Fyber)",
+    "url": "https://docs.digitalturbine.com/dt-exchange/publishers/sdk-configuration/integrating-the-ios-sdk/dt-exchange-ios-changelog.md",
+    "link_url": "https://docs.digitalturbine.com/dt-exchange/publishers/sdk-configuration/integrating-the-ios-sdk/dt-exchange-ios-changelog",
+    "keyword": "",
+    "enable_keyword": false,
+    "interval_seconds": 60,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
+    "enabled": true,
+    "created_at": "2026-05-14T17:22:28+09:00",
+    "updated_at": "2026-05-14T17:22:28+09:00"
+  },
+  {
+    "id": "e41ab39a-4a99-48e0-aa37-0f14b2215ce5",
+    "name": "AppLovin MAX SDK Android Facebook",
+    "url": "https://github.com/AppLovin/AppLovin-MAX-SDK-Android/blob/master/Facebook/CHANGELOG.md",
+    "link_url": "https://developers.facebook.com/docs/audience-network/setting-up/platform-setup/android/changelog",
+    "keyword": "",
+    "enable_keyword": false,
+    "interval_seconds": 60,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
+    "enabled": true,
+    "created_at": "2026-05-14T17:38:43+09:00",
+    "updated_at": "2026-05-14T18:32:37.985335+09:00"
+  },
+  {
+    "id": "2e06a199-c371-4bb8-9b32-b4adb21c95ac",
+    "name": "AppLovin MAX SDK iOS Facebook",
+    "url": "https://github.com/AppLovin/AppLovin-MAX-SDK-iOS/blob/master/Facebook/CHANGELOG.md",
+    "link_url": "https://developers.facebook.com/docs/audience-network/setting-up/platform-setup/ios/changelog",
+    "keyword": "",
+    "enable_keyword": false,
+    "interval_seconds": 60,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
+    "enabled": true,
+    "created_at": "2026-05-14T17:54:44+09:00",
+    "updated_at": "2026-05-14T18:32:14.470187+09:00"
+  },
+  {
+    "id": "055aa075-fe60-4970-af1e-38bece9b11d2",
+    "name": "Unity In-App Purchasing",
+    "url": "https://packages.unity.com/com.unity.purchasing",
+    "keyword": "",
+    "enable_keyword": false,
+    "interval_seconds": 60,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
+    "enabled": true,
+    "created_at": "2026-05-14T18:30:00+09:00",
+    "updated_at": "2026-05-14T18:30:00+09:00"
   }
 ]

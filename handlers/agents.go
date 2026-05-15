@@ -296,11 +296,6 @@ func agentFromForm(form url.Values) (models.Agent, error) {
 	}
 
 	enableKeyword := form.Get("enable_keyword") == "1"
-	enableVersion := form.Get("enable_version") == "1"
-	if !enableKeyword && !enableVersion {
-		return models.Agent{}, fmt.Errorf("키워드 감지 또는 버전 감지 중 하나는 활성화하세요")
-	}
-
 	keyword := strings.TrimSpace(form.Get("keyword"))
 	if enableKeyword && keyword == "" {
 		return models.Agent{}, fmt.Errorf("키워드를 입력하세요")
@@ -314,15 +309,13 @@ func agentFromForm(form url.Values) (models.Agent, error) {
 	webhookIDs := form["webhook_ids"]
 
 	return models.Agent{
-		Name:             name,
-		URL:              rawURL,
-		LinkURL:          linkURL,
-		Keyword:          keyword,
-		EnableKeyword:    enableKeyword,
-		EnableVersion:    enableVersion,
-		AlertOnFirstSeen: form.Get("alert_on_first_seen") == "1",
-		IntervalSeconds:  interval,
-		WebhookIDs:       webhookIDs,
-		Enabled:          true,
+		Name:            name,
+		URL:             rawURL,
+		LinkURL:         linkURL,
+		Keyword:         keyword,
+		EnableKeyword:   enableKeyword,
+		IntervalSeconds: interval,
+		WebhookIDs:      webhookIDs,
+		Enabled:         true,
 	}, nil
 }

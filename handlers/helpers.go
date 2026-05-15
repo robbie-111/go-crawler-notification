@@ -88,8 +88,6 @@ func startRunner(agent models.Agent) error {
 
 	options := monitor.Options{
 		EnableKeywordAlert: agent.EnableKeyword,
-		EnableVersionAlert: agent.EnableVersion,
-		AlertOnFirstSeen:   agent.AlertOnFirstSeen,
 		LinkURL:            agent.LinkURL,
 	}
 
@@ -182,6 +180,14 @@ func handleEvent(agent models.Agent, event monitor.Event) {
 				continue
 			}
 			n.SetLogFn(logFn)
+			if event.VersionChanged {
+				if err := n.Send(event, agent.Name); err != nil {
+					msg := fmt.Sprintf("agent=%s kind=%T err=%v", agent.Name, n, err)
+					log.Printf("[NOTIFY_ERROR] %s", msg)
+					logFn("NOTIFY_ERROR", "error", msg)
+				}
+				continue
+			}
 			notify.SendAsync(n, event, agent.Name, logFn)
 		}
 	}

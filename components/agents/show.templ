@@ -69,14 +69,6 @@ templ Show(props layouts.PageProps, agent models.Agent, events []models.MonitorE
 							<p>
 								<b>폴링 주기:</b> { fmt.Sprintf("%d초", agent.IntervalSeconds) }
 							</p>
-							<p>
-								<b>첫 감지 알림:</b>
-								if agent.AlertOnFirstSeen {
-									<span class="label label-warning">ON</span>
-								} else {
-									<span class="label label-default">OFF</span>
-								}
-							</p>
 						</div>
 						<!-- Logs tab -->
 						<div class="tab-pane" id="logs" data-agent-id={ agent.ID }>

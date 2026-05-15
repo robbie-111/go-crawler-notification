@@ -89,9 +89,7 @@ templ DetectionBadges(agent models.Agent) {
 	if agent.EnableKeyword {
 		<span class="label label-info">키워드</span>
 	}
-	if agent.EnableVersion {
-		<span class="label label-primary">버전</span>
-	}
+	<span class="label label-primary">버전</span>
 }
 
 templ SlackBadges(agent models.Agent, webhooks map[string]models.Webhook) {

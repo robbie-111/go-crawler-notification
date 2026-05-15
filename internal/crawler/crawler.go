@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	"go-crawler-notification/internal/normalize"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -23,12 +25,20 @@ const (
 	ContentModeBody    ContentMode = "body"
 	ContentModeHTML    ContentMode = "html"
 	ContentModeHTMLRaw ContentMode = "html-raw"
+	ContentModeUnity   ContentMode = "unity-package"
 )
 
 type FetchResult struct {
 	Content       string
 	Mode          ContentMode
 	NormalizedURL string
+	LinkURL       string
+}
+
+type unityPackageMeta struct {
+	DistTags struct {
+		Latest string `json:"latest"`
+	} `json:"dist-tags"`
 }
 
 func FetchContent(rawURL string) (FetchResult, error) {
@@ -36,6 +46,10 @@ func FetchContent(rawURL string) (FetchResult, error) {
 
 	if _, err := url.ParseRequestURI(normalizedURL); err != nil {
 		return FetchResult{}, fmt.Errorf("invalid url: %w", err)
+	}
+
+	if isUnityPackageRegistryURL(normalizedURL) {
+		return fetchUnityPackageChangelog(normalizedURL)
 	}
 
 	contentType, err := detectContentType(normalizedURL)
@@ -58,6 +72,120 @@ func FetchContent(rawURL string) (FetchResult, error) {
 	}
 
 	return FetchResult{Content: content, Mode: mode, NormalizedURL: normalizedURL}, nil
+}
+
+func isUnityPackageRegistryURL(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	return parsed.Host == "packages.unity.com" && strings.Count(strings.Trim(parsed.Path, "/"), "/") == 0 && strings.HasPrefix(strings.Trim(parsed.Path, "/"), "com.unity.")
+}
+
+func fetchUnityPackageChangelog(registryURL string) (FetchResult, error) {
+	latest, err := fetchUnityPackageLatest(registryURL)
+	if err != nil {
+		return FetchResult{}, err
+	}
+
+	parsed, err := url.Parse(registryURL)
+	if err != nil {
+		return FetchResult{}, err
+	}
+	packageName := strings.Trim(parsed.Path, "/")
+	changelogURL := unityChangelogURL(packageName, latest)
+	content, err := fetchUnityChangelogMarkdown(changelogURL)
+	if err != nil {
+		return FetchResult{}, err
+	}
+
+	return FetchResult{
+		Content:       content,
+		Mode:          ContentModeUnity,
+		NormalizedURL: registryURL,
+		LinkURL:       changelogURL,
+	}, nil
+}
+
+func fetchUnityPackageLatest(registryURL string) (string, error) {
+	client := &http.Client{Timeout: requestTimeout}
+	response, err := client.Get(registryURL)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return "", fmt.Errorf("unity registry returned %s", response.Status)
+	}
+
+	var meta unityPackageMeta
+	if err := json.NewDecoder(response.Body).Decode(&meta); err != nil {
+		return "", err
+	}
+	latest := strings.TrimSpace(meta.DistTags.Latest)
+	if latest == "" {
+		return "", fmt.Errorf("unity registry latest version is empty")
+	}
+	return latest, nil
+}
+
+func unityChangelogURL(packageName, latestVersion string) string {
+	return fmt.Sprintf("https://docs.unity3d.com/Packages/%s@%s/changelog/CHANGELOG.html", packageName, unityDocsVersion(latestVersion))
+}
+
+func unityDocsVersion(version string) string {
+	base := version
+	if idx := strings.IndexAny(base, "-+"); idx != -1 {
+		base = base[:idx]
+	}
+	parts := strings.Split(base, ".")
+	if len(parts) >= 2 {
+		return parts[0] + "." + parts[1]
+	}
+	return base
+}
+
+func fetchUnityChangelogMarkdown(changelogURL string) (string, error) {
+	client := &http.Client{Timeout: requestTimeout}
+	response, err := client.Get(changelogURL)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return "", fmt.Errorf("unity changelog returned %s", response.Status)
+	}
+
+	document, err := goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var lines []string
+	document.Find("h1, h2, h3, p, li").Each(func(_ int, selection *goquery.Selection) {
+		text := strings.TrimSpace(selection.Text())
+		if text == "" {
+			return
+		}
+		switch goquery.NodeName(selection) {
+		case "h1":
+			lines = append(lines, "# "+text, "")
+		case "h2":
+			lines = append(lines, "## "+text, "")
+		case "h3":
+			lines = append(lines, "### "+text, "")
+		case "li":
+			lines = append(lines, "- "+text)
+		default:
+			lines = append(lines, text, "")
+		}
+	})
+
+	content := strings.TrimSpace(strings.Join(lines, "\n"))
+	if content == "" {
+		return "", fmt.Errorf("empty unity changelog content")
+	}
+	return content, nil
 }
 
 func detectContentType(rawURL string) (string, error) {

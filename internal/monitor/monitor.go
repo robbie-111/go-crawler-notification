@@ -32,8 +32,6 @@ type Event struct {
 
 type Options struct {
 	EnableKeywordAlert bool
-	EnableVersionAlert bool
-	AlertOnFirstSeen   bool
 	LinkURL            string // 슬랙 알림 title_link용 URL (선택)
 }
 
@@ -121,7 +119,11 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 			return
 		}
 
-		event := Event{Status: "checked", Mode: string(result.Mode), Content: result.Content, URL: rawURL, LinkURL: options.LinkURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt}
+		linkURL := options.LinkURL
+		if linkURL == "" {
+			linkURL = result.LinkURL
+		}
+		event := Event{Status: "checked", Mode: string(result.Mode), Content: result.Content, URL: rawURL, LinkURL: linkURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt}
 
 		if options.EnableKeywordAlert {
 			matched := strings.Contains(strings.ToLower(result.Content), normalizedKeyword)
@@ -140,36 +142,44 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 			}
 		}
 
-		if options.EnableVersionAlert {
-			latestVersion, versionErr := version.ExtractLatest(result.Content)
+		{
+			versions, versionErr := version.ExtractVersions(result.Content)
 			if versionErr != nil {
 				event.VersionError = versionErr.Error()
 				r.syslog("VERSION_PARSE_FAILED", "warn",
 					fmt.Sprintf("url=%s mode=%s reason=%v", result.NormalizedURL, result.Mode, versionErr))
 			} else {
+				latestVersion := versions[0]
 				event.LatestVersion = latestVersion
 				previous, ok := r.store.Get(result.NormalizedURL)
 				if !ok || previous.LastSeenVersion == "" {
-					// 최초 감지 — 저장 후 AlertOnFirstSeen 설정 시에만 알림
-					if options.AlertOnFirstSeen {
-						r.syslog("FIRST_SEEN_VERSION", "info",
-							fmt.Sprintf("url=%s version=%s", result.NormalizedURL, latestVersion))
-						event.VersionChanged = true
-					}
+					// 최초 감지 — 알림 없이 최신 버전만 기준점으로 저장
+					r.syslog("FIRST_SEEN_VERSION", "info",
+						fmt.Sprintf("url=%s version=%s", result.NormalizedURL, latestVersion))
 					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
 						onEvent(Event{Status: "error", URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
 						return
 					}
 				} else if cmp := version.Compare(latestVersion, previous.LastSeenVersion); cmp > 0 {
-					// 더 높은 버전 감지 → 알림 + 저장
-					event.VersionChanged = true
-					event.VersionPrevious = previous.LastSeenVersion
-					r.syslog("NEW_VERSION", "info",
-						fmt.Sprintf("url=%s %s → %s", result.NormalizedURL, previous.LastSeenVersion, latestVersion))
+					// 저장된 버전보다 높은 모든 버전을 오래된 순서부터 알림
+					newerVersions := versionsNewerThan(versions, previous.LastSeenVersion)
+					fromVersion := previous.LastSeenVersion
+					for _, nextVersion := range newerVersions {
+						versionEvent := event
+						versionEvent.Status = "version_changed"
+						versionEvent.LatestVersion = nextVersion
+						versionEvent.VersionPrevious = fromVersion
+						versionEvent.VersionChanged = true
+						r.syslog("NEW_VERSION", "info",
+							fmt.Sprintf("url=%s %s → %s", result.NormalizedURL, fromVersion, nextVersion))
+						onEvent(versionEvent)
+						fromVersion = nextVersion
+					}
 					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
 						onEvent(Event{Status: "error", URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
 						return
 					}
+					return
 				} else if cmp == 0 {
 					// 동일 버전 — LastCheckedAt만 갱신, 알림 없음
 					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
@@ -197,4 +207,22 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 			runCheck()
 		}
 	}
+}
+
+func versionsNewerThan(versions []string, previous string) []string {
+	var newer []string
+	for _, v := range versions {
+		cmp := version.Compare(v, previous)
+		if cmp == 1 {
+			newer = append(newer, v)
+			continue
+		}
+		if cmp == 0 {
+			break
+		}
+	}
+	for i, j := 0, len(newer)-1; i < j; i, j = i+1, j-1 {
+		newer[i], newer[j] = newer[j], newer[i]
+	}
+	return newer
 }
