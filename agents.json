@@ -110,5 +110,23 @@
     "enabled": true,
     "created_at": "2026-05-15T00:00:00+09:00",
     "updated_at": "2026-05-15T18:14:20.951586+09:00"
+  },
+  {
+    "id": "7b11d9dc-2c54-4fb5-a532-9d1c7b28d0bc",
+    "name": "Firebase Unity SDK",
+    "url": "https://firebase.google.com/support/release-notes/unity",
+    "link_url": "https://firebase.google.com/support/release-notes/unity",
+    "keyword": "",
+    "enable_keyword": false,
+    "detection_options": {
+      "content_selector": ".devsite-article-body .changelog"
+    },
+    "interval_seconds": 60,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
+    "enabled": true,
+    "created_at": "2026-05-15T00:00:00+09:00",
+    "updated_at": "2026-05-15T00:00:00+09:00"
   }
 ]

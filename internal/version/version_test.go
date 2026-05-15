@@ -101,6 +101,70 @@ func TestExtractSectionUnityPackageChangelog(t *testing.T) {
 	}
 }
 
+func TestExtractSectionFirebaseUnitySDKReleaseNotes(t *testing.T) {
+	content := `# Firebase Unity SDK Release Notes
+
+## Version 13.11.0 - May 14, 2026
+
+- Update to Firebase C++ SDK version 13.7.0.
+- (Android) Update to Firebase Android BoM version 34.13.0.
+- (iOS) Update to Firebase Cocoapods version 12.13.0.
+- (iOS, tvOS, Desktop) iOS, tvOS, and macOS SDKs are now built using Xcode 26.2.
+- Strip debug symbols from Mac and Linux libraries, to reduce library size.
+- Enforce the Xcode CMake generator for iOS and tvOS SDKs.
+- (iOS) Improve initialization to address intermittent crashes on iOS 26. (#1436).
+
+### Firebase AI
+
+- Add support for Grounding with Google Maps.
+- Improved image configuration when using Nano Banana.
+- Add support for LiveSession resumption.
+- Fix tgz export, added missing asmdef for Firebase AI. Fixes issue where Firebase AI was not being exported correctly in the tgz build.
+
+### Cloud Functions
+
+- Fixed tgz export, added missing asmdef for functions. Fixes issue where Functions were not being exported correctly in the tgz build.
+- Added support for passing and enforcing Limited Use App Check tokens.
+
+### Cloud Storage
+
+- Added ListAsync API to list items and prefixes under a reference.
+
+## Version 13.10.0 - April 16, 2026
+
+- Update to Firebase C++ SDK version 13.6.0.`
+
+	versions, err := ExtractVersions(content)
+	if err != nil {
+		t.Fatalf("ExtractVersions returned error: %v", err)
+	}
+	wantVersions := []string{"13.11.0", "13.10.0"}
+	if strings.Join(versions, ",") != strings.Join(wantVersions, ",") {
+		t.Fatalf("ExtractVersions() = %#v, want %#v", versions, wantVersions)
+	}
+
+	section := ExtractSection(content, "13.11.0")
+	if section == "" {
+		t.Fatal("ExtractSection() returned empty string")
+	}
+	for _, want := range []string{
+		"Update to Firebase C++ SDK version 13.7.0",
+		"### Firebase AI",
+		"Grounding with Google Maps",
+		"### Cloud Functions",
+		"Limited Use App Check tokens",
+		"### Cloud Storage",
+		"ListAsync API",
+	} {
+		if !strings.Contains(section, want) {
+			t.Fatalf("ExtractSection() = %q, want to contain %q", section, want)
+		}
+	}
+	if notWant := "13.10.0"; strings.Contains(section, notWant) {
+		t.Fatalf("ExtractSection() = %q, should not contain next version %q", section, notWant)
+	}
+}
+
 func TestExtractVersions(t *testing.T) {
 	for _, tc := range []struct {
 		name    string

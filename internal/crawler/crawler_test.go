@@ -85,3 +85,50 @@ func TestRenderSelectedHTMLMarkdownPreservesNestedLists(t *testing.T) {
 		t.Fatalf("renderSelectedHTMLMarkdown() = %q, should not contain text outside selector", got)
 	}
 }
+
+func TestRenderSelectedHTMLMarkdownFirebaseUnityReleaseNotes(t *testing.T) {
+	rawHTML := `<html><body>
+<nav>Navigation noise</nav>
+<article class="devsite-article">
+  <div class="devsite-article-body clearfix">
+    <div class="changelog">
+      <h2 id="version_13110_-_may_14_2026"><a name="13.11.0">Version 13.11.0 - May 14, 2026</a></h2>
+      <ul>
+        <li><span class="release-changed"></span> Update to Firebase C++ SDK version 13.7.0.</li>
+        <li><span class="release-fixed"></span> (iOS) Improve initialization to address intermittent crashes on iOS 26.</li>
+      </ul>
+      <h3 id="firebase_ai">Firebase AI</h3>
+      <ul>
+        <li><span class="release-feature"></span> Add support for Grounding with Google Maps.</li>
+      </ul>
+      <h3 id="cloud-storage"><span class="notranslate">Cloud Storage</span></h3>
+      <ul>
+        <li><span class="release-feature"></span> Added <code>ListAsync</code> API to list items and prefixes under a reference.</li>
+      </ul>
+      <h2 id="version_13100_-_april_16_2026"><a name="13.10.0">Version 13.10.0 - April 16, 2026</a></h2>
+    </div>
+  </div>
+</article>
+</body></html>`
+
+	got, err := renderSelectedHTMLMarkdown(rawHTML, ".devsite-article-body .changelog")
+	if err != nil {
+		t.Fatalf("renderSelectedHTMLMarkdown returned error: %v", err)
+	}
+	for _, want := range []string{
+		"## Version 13.11.0 - May 14, 2026",
+		"- Update to Firebase C++ SDK version 13.7.0.",
+		"### Firebase AI",
+		"- Add support for Grounding with Google Maps.",
+		"### Cloud Storage",
+		"- Added ListAsync API to list items and prefixes under a reference.",
+		"## Version 13.10.0 - April 16, 2026",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("renderSelectedHTMLMarkdown() = %q, want to contain %q", got, want)
+		}
+	}
+	if strings.Contains(got, "Navigation noise") {
+		t.Fatalf("renderSelectedHTMLMarkdown() = %q, should not contain text outside selector", got)
+	}
+}
