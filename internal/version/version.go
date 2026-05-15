@@ -1,13 +1,16 @@
 package version
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const versionNumberPattern = `\d+\.\d+\.\d+(?:\.\d+)?(?:[-+][A-Za-z0-9.\-]+)?`
+const defaultDateHeadingPattern = `^\s*(?:#{1,6}\s*)?(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*$`
 
 // versionHeadingRe는 "## X.Y.Z", "## Version X.Y.Z", "## Release X.Y.Z" 형태의 헤딩을 매칭합니다.
 // 뒤에 앵커 HTML (<a href="..."></a>) 이 붙어있어도 매칭됩니다.
@@ -18,6 +21,70 @@ var versionHeadingLineRe = regexp.MustCompile(`(?i)^\s*(?:#{1,6}[ \t]*)?(?:(?:Ve
 var dividerRe = regexp.MustCompile(`(?m)^\*{3,}$|^-{3,}$|^_{3,}$`)
 
 const maxSectionLen = 2800 // Slack section text 3000자 제한에 안전 마진 적용
+
+type Options struct {
+	VersionParser VersionParserOptions `json:"version_parser"`
+}
+
+type VersionParserOptions struct {
+	Type              string `json:"type"`
+	HeadingRegex      string `json:"heading_regex"`
+	SectionStartRegex string `json:"section_start_regex"`
+	Compare           string `json:"compare"`
+}
+
+func parseOptions(raw json.RawMessage) Options {
+	var opts Options
+	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "{}" {
+		return opts
+	}
+	_ = json.Unmarshal(raw, &opts)
+	return opts
+}
+
+func (o Options) useDateHeading() bool {
+	return o.VersionParser.Type == "date_heading"
+}
+
+func (o Options) dateHeadingRegex() (*regexp.Regexp, error) {
+	pattern := strings.TrimSpace(o.VersionParser.HeadingRegex)
+	if pattern == "" {
+		pattern = defaultDateHeadingPattern
+	}
+	return regexp.Compile(pattern)
+}
+
+func (o Options) sectionStartRegex() (*regexp.Regexp, error) {
+	pattern := strings.TrimSpace(o.VersionParser.SectionStartRegex)
+	if pattern == "" {
+		return nil, nil
+	}
+	return regexp.Compile(pattern)
+}
+
+func ExtractSectionWithOptions(content, targetVersion string, rawOptions json.RawMessage) string {
+	opts := parseOptions(rawOptions)
+	if opts.useDateHeading() {
+		return extractDateHeadingSection(content, targetVersion, opts)
+	}
+	return ExtractSection(content, targetVersion)
+}
+
+func ExtractVersionsWithOptions(content string, rawOptions json.RawMessage) ([]string, error) {
+	opts := parseOptions(rawOptions)
+	if opts.useDateHeading() {
+		return extractDateHeadingVersions(content, opts)
+	}
+	return ExtractVersions(content)
+}
+
+func CompareWithOptions(a, b string, rawOptions json.RawMessage) int {
+	opts := parseOptions(rawOptions)
+	if opts.useDateHeading() || opts.VersionParser.Compare == "date" {
+		return compareDateKeys(a, b)
+	}
+	return Compare(a, b)
+}
 
 // ExtractSection은 content에서 targetVersion 헤딩부터 다음 버전 헤딩 직전까지의
 // 텍스트를 추출합니다. 매칭 실패 시 빈 문자열을 반환합니다.
@@ -79,6 +146,169 @@ func ExtractSection(content, targetVersion string) string {
 	}
 
 	return result
+}
+
+func cleanSection(body string) string {
+	body = dividerRe.ReplaceAllString(body, "")
+
+	lines := strings.Split(body, "\n")
+	var cleaned []string
+	blankCount := 0
+	for _, line := range lines {
+		trimmed := strings.TrimRight(line, " \t")
+		if trimmed == "" {
+			blankCount++
+			if blankCount <= 1 {
+				cleaned = append(cleaned, "")
+			}
+		} else {
+			blankCount = 0
+			cleaned = append(cleaned, trimmed)
+		}
+	}
+	result := strings.TrimSpace(strings.Join(cleaned, "\n"))
+
+	if len(result) > maxSectionLen {
+		result = result[:maxSectionLen]
+		if idx := strings.LastIndex(result, "\n"); idx > maxSectionLen-200 {
+			result = result[:idx]
+		}
+		result = strings.TrimSpace(result) + "\n…"
+	}
+
+	return result
+}
+
+func dateKeyFromMatch(match []string) string {
+	if len(match) < 4 {
+		return ""
+	}
+	year, err := strconv.Atoi(match[1])
+	if err != nil {
+		return ""
+	}
+	month, err := strconv.Atoi(match[2])
+	if err != nil {
+		return ""
+	}
+	day, err := strconv.Atoi(match[3])
+	if err != nil {
+		return ""
+	}
+	if month < 1 || month > 12 || day < 1 || day > 31 {
+		return ""
+	}
+	return fmt.Sprintf("%04d.%02d.%02d", year, month, day)
+}
+
+func extractDateHeadingVersions(content string, opts Options) ([]string, error) {
+	normalized := strings.TrimSpace(content)
+	if normalized == "" {
+		return nil, fmt.Errorf("empty content")
+	}
+
+	re, err := opts.dateHeadingRegex()
+	if err != nil {
+		return nil, fmt.Errorf("invalid date heading regex: %w", err)
+	}
+	sectionStartRe, err := opts.sectionStartRegex()
+	if err != nil {
+		return nil, fmt.Errorf("invalid section start regex: %w", err)
+	}
+
+	var versions []string
+	seen := map[string]bool{}
+	lines := strings.Split(normalized, "\n")
+	for i, line := range lines {
+		key := dateKeyFromMatch(re.FindStringSubmatch(line))
+		if key == "" || seen[key] || !isDateHeadingSectionStart(lines, i, sectionStartRe) {
+			continue
+		}
+		seen[key] = true
+		versions = append(versions, key)
+	}
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no date heading pattern matched")
+	}
+	return versions, nil
+}
+
+func extractDateHeadingSection(content, targetVersion string, opts Options) string {
+	if content == "" || targetVersion == "" {
+		return ""
+	}
+
+	re, err := opts.dateHeadingRegex()
+	if err != nil {
+		return ""
+	}
+	sectionStartRe, err := opts.sectionStartRegex()
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.SplitAfter(content, "\n")
+	plainLines := splitAfterToLines(lines)
+	start := -1
+	end := len(lines)
+	for i, line := range lines {
+		key := dateKeyFromMatch(re.FindStringSubmatch(strings.TrimRight(line, "\n")))
+		if key == "" || !isDateHeadingSectionStart(plainLines, i, sectionStartRe) {
+			continue
+		}
+		if start == -1 {
+			if key == targetVersion {
+				start = i + 1
+			}
+			continue
+		}
+		end = i
+		break
+	}
+	if start == -1 || start >= len(lines) {
+		return ""
+	}
+	return cleanSection(strings.Join(lines[start:end], ""))
+}
+
+func splitAfterToLines(lines []string) []string {
+	plain := make([]string, len(lines))
+	for i, line := range lines {
+		plain[i] = strings.TrimRight(line, "\n")
+	}
+	return plain
+}
+
+func isDateHeadingSectionStart(lines []string, index int, sectionStartRe *regexp.Regexp) bool {
+	if sectionStartRe == nil {
+		return true
+	}
+	for _, line := range lines[index+1:] {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		return sectionStartRe.MatchString(trimmed)
+	}
+	return false
+}
+
+func compareDateKeys(a, b string) int {
+	at, err := time.Parse("2006.01.02", a)
+	if err != nil {
+		return -2
+	}
+	bt, err := time.Parse("2006.01.02", b)
+	if err != nil {
+		return -2
+	}
+	if at.After(bt) {
+		return 1
+	}
+	if at.Before(bt) {
+		return -1
+	}
+	return 0
 }
 
 // versionPatterns는 우선순위 순으로 버전 문자열을 추출합니다.

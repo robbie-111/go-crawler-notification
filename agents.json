@@ -86,5 +86,29 @@
     "enabled": true,
     "created_at": "2026-05-14T18:30:00+09:00",
     "updated_at": "2026-05-14T18:30:00+09:00"
+  },
+  {
+    "id": "8f192522-a1ab-4ee8-963d-881b5758bd34",
+    "name": "NHN AppGuard",
+    "url": "https://docs.nhncloud.com/ko/Security/NHN%20AppGuard/ko/release-notes/",
+    "link_url": "https://docs.nhncloud.com/ko/Security/NHN%20AppGuard/ko/release-notes/",
+    "keyword": "",
+    "enable_keyword": false,
+    "detection_options": {
+      "content_selector": "section.page__content-wrapper",
+      "version_parser": {
+        "type": "date_heading",
+        "heading_regex": "^\\s*(?:#{1,6}\\s*)?(\\d{4})\\.\\s*(\\d{1,2})\\.\\s*(\\d{1,2})\\.?\\s*$",
+        "section_start_regex": "^\\s*(?:[-*]\\s*)?\\\\?\\[",
+        "compare": "date"
+      }
+    },
+    "interval_seconds": 60,
+    "webhook_ids": [
+      "0c3e2c31-5625-4248-8b79-3d50074c6ed4"
+    ],
+    "enabled": true,
+    "created_at": "2026-05-15T00:00:00+09:00",
+    "updated_at": "2026-05-15T18:14:20.951586+09:00"
   }
 ]

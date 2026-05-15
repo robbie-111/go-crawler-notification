@@ -106,7 +106,7 @@ func extractChangelog(event monitor.Event) string {
 	if !event.VersionChanged || event.LatestVersion == "" || event.Content == "" {
 		return ""
 	}
-	raw := version.ExtractSection(event.Content, event.LatestVersion)
+	raw := version.ExtractSectionWithOptions(event.Content, event.LatestVersion, event.DetectionOptions)
 	if raw == "" {
 		return ""
 	}

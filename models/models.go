@@ -1,20 +1,24 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Agent는 하나의 모니터링 단위입니다.
 type Agent struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	URL             string    `json:"url"`
-	LinkURL         string    `json:"link_url,omitempty"` // 슬랙 알림 링크 URL (선택). 비어있으면 URL 사용.
-	Keyword         string    `json:"keyword"`
-	EnableKeyword   bool      `json:"enable_keyword"`
-	IntervalSeconds int       `json:"interval_seconds"`
-	WebhookIDs      []string  `json:"webhook_ids"`
-	Enabled         bool      `json:"enabled"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID               string          `json:"id"`
+	Name             string          `json:"name"`
+	URL              string          `json:"url"`
+	LinkURL          string          `json:"link_url,omitempty"` // 슬랙 알림 링크 URL (선택). 비어있으면 URL 사용.
+	Keyword          string          `json:"keyword"`
+	EnableKeyword    bool            `json:"enable_keyword"`
+	DetectionOptions json.RawMessage `json:"detection_options,omitempty"`
+	IntervalSeconds  int             `json:"interval_seconds"`
+	WebhookIDs       []string        `json:"webhook_ids"`
+	Enabled          bool            `json:"enabled"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 // Webhook은 알림 수신 채널 설정입니다.

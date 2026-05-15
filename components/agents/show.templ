@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"encoding/json"
 	"fmt"
 	"go-crawler-notification/components/layouts"
 	"go-crawler-notification/models"
@@ -68,6 +69,10 @@ templ Show(props layouts.PageProps, agent models.Agent, events []models.MonitorE
 							</p>
 							<p>
 								<b>폴링 주기:</b> { fmt.Sprintf("%d초", agent.IntervalSeconds) }
+							</p>
+							<p>
+								<b>Options:</b>
+								<pre>{ prettyDetectionOptions(agent) }</pre>
 							</p>
 						</div>
 						<!-- Logs tab -->
@@ -223,6 +228,21 @@ func syslogLevelClass(level string) string {
 	default:
 		return "info"
 	}
+}
+
+func prettyDetectionOptions(agent models.Agent) string {
+	if len(agent.DetectionOptions) == 0 {
+		return "{}"
+	}
+	var v interface{}
+	if err := json.Unmarshal(agent.DetectionOptions, &v); err != nil {
+		return string(agent.DetectionOptions)
+	}
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return string(agent.DetectionOptions)
+	}
+	return string(b)
 }
 
 func syslogLabelClass(tag string) string {

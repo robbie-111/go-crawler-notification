@@ -307,15 +307,23 @@ func agentFromForm(form url.Values) (models.Agent, error) {
 	}
 
 	webhookIDs := form["webhook_ids"]
+	detectionOptions := strings.TrimSpace(form.Get("detection_options"))
+	if detectionOptions == "" {
+		detectionOptions = "{}"
+	}
+	if !json.Valid([]byte(detectionOptions)) {
+		return models.Agent{}, fmt.Errorf("감지 옵션 JSON이 유효하지 않습니다")
+	}
 
 	return models.Agent{
-		Name:            name,
-		URL:             rawURL,
-		LinkURL:         linkURL,
-		Keyword:         keyword,
-		EnableKeyword:   enableKeyword,
-		IntervalSeconds: interval,
-		WebhookIDs:      webhookIDs,
-		Enabled:         true,
+		Name:             name,
+		URL:              rawURL,
+		LinkURL:          linkURL,
+		Keyword:          keyword,
+		EnableKeyword:    enableKeyword,
+		DetectionOptions: json.RawMessage(detectionOptions),
+		IntervalSeconds:  interval,
+		WebhookIDs:       webhookIDs,
+		Enabled:          true,
 	}, nil
 }

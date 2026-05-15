@@ -89,6 +89,7 @@ func startRunner(agent models.Agent) error {
 	options := monitor.Options{
 		EnableKeywordAlert: agent.EnableKeyword,
 		LinkURL:            agent.LinkURL,
+		DetectionOptions:   agent.DetectionOptions,
 	}
 
 	if err := r.Start(agent.URL, agent.Keyword, options, func(event monitor.Event) {

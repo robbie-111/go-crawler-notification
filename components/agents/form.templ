@@ -85,6 +85,13 @@ templ form(props layouts.PageProps, agent models.Agent, webhooks []models.Webhoo
 									<p class="help-block">키워드 감지 사용 시 필수.</p>
 								</div>
 							</div>
+							<div class="form-group">
+								<label class="col-sm-3 control-label">Options JSON</label>
+								<div class="col-sm-9">
+									<textarea class="form-control" name="detection_options" rows="8" style="font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;">{ detectionOptionsText(agent) }</textarea>
+									<p class="help-block">특수 사이트의 버전/섹션 파싱 규칙을 JSON으로 지정합니다. 기본값: <code>{}</code></p>
+								</div>
+							</div>
 						</div>
 					<!-- 알림 설정 탭 -->
 					<div id="tab-notify" class="tab-pane">
@@ -195,6 +202,13 @@ func containsID(ids []string, id string) bool {
 		}
 	}
 	return false
+}
+
+func detectionOptionsText(agent models.Agent) string {
+	if len(agent.DetectionOptions) == 0 {
+		return "{}"
+	}
+	return string(agent.DetectionOptions)
 }
 
 func webhookToggleClass(checked bool) string {

@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -14,25 +15,27 @@ import (
 )
 
 type Event struct {
-	Status          string
-	Mode            string
-	Content         string
-	URL             string
-	LinkURL         string // 슬랙 알림 title_link용 URL (비어있으면 URL 사용)
-	NormalizedURL   string
-	Keyword         string
-	CheckedAt       time.Time
-	Match           bool
-	LatestVersion   string
-	VersionChanged  bool
-	VersionPrevious string
-	VersionError    string
-	Err             error
+	Status           string
+	Mode             string
+	Content          string
+	URL              string
+	LinkURL          string // 슬랙 알림 title_link용 URL (비어있으면 URL 사용)
+	NormalizedURL    string
+	Keyword          string
+	CheckedAt        time.Time
+	Match            bool
+	LatestVersion    string
+	VersionChanged   bool
+	VersionPrevious  string
+	VersionError     string
+	DetectionOptions json.RawMessage
+	Err              error
 }
 
 type Options struct {
 	EnableKeywordAlert bool
 	LinkURL            string // 슬랙 알림 title_link용 URL (선택)
+	DetectionOptions   json.RawMessage
 }
 
 // LogFn은 시스템 로그를 외부에 기록하기 위한 콜백 함수 타입입니다.
@@ -113,7 +116,7 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 
 	runCheck := func() {
 		checkedAt := time.Now()
-		result, err := crawler.FetchContent(rawURL)
+		result, err := crawler.FetchContentWithOptions(rawURL, options.DetectionOptions)
 		if err != nil {
 			onEvent(Event{Status: "error", URL: rawURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
 			return
@@ -123,7 +126,7 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 		if linkURL == "" {
 			linkURL = result.LinkURL
 		}
-		event := Event{Status: "checked", Mode: string(result.Mode), Content: result.Content, URL: rawURL, LinkURL: linkURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt}
+		event := Event{Status: "checked", Mode: string(result.Mode), Content: result.Content, URL: rawURL, LinkURL: linkURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, DetectionOptions: options.DetectionOptions}
 
 		if options.EnableKeywordAlert {
 			matched := strings.Contains(strings.ToLower(result.Content), normalizedKeyword)
@@ -143,7 +146,7 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 		}
 
 		{
-			versions, versionErr := version.ExtractVersions(result.Content)
+			versions, versionErr := version.ExtractVersionsWithOptions(result.Content, options.DetectionOptions)
 			if versionErr != nil {
 				event.VersionError = versionErr.Error()
 				r.syslog("VERSION_PARSE_FAILED", "warn",
@@ -153,16 +156,22 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 				event.LatestVersion = latestVersion
 				previous, ok := r.store.Get(result.NormalizedURL)
 				if !ok || previous.LastSeenVersion == "" {
-					// 최초 감지 — 알림 없이 최신 버전만 기준점으로 저장
+					// 최초 감지 — 최신 버전을 기준점으로 저장하고 첫 감지 알림을 발송
 					r.syslog("FIRST_SEEN_VERSION", "info",
 						fmt.Sprintf("url=%s version=%s", result.NormalizedURL, latestVersion))
 					if err := r.store.Set(result.NormalizedURL, state.Entry{LastSeenVersion: latestVersion, LastCheckedAt: checkedAt}); err != nil {
 						onEvent(Event{Status: "error", URL: rawURL, NormalizedURL: result.NormalizedURL, Keyword: keyword, CheckedAt: checkedAt, Err: err})
 						return
 					}
-				} else if cmp := version.Compare(latestVersion, previous.LastSeenVersion); cmp > 0 {
+					firstSeenEvent := event
+					firstSeenEvent.Status = "version_changed"
+					firstSeenEvent.LatestVersion = latestVersion
+					firstSeenEvent.VersionChanged = true
+					onEvent(firstSeenEvent)
+					return
+				} else if cmp := version.CompareWithOptions(latestVersion, previous.LastSeenVersion, options.DetectionOptions); cmp > 0 {
 					// 저장된 버전보다 높은 모든 버전을 오래된 순서부터 알림
-					newerVersions := versionsNewerThan(versions, previous.LastSeenVersion)
+					newerVersions := versionsNewerThan(versions, previous.LastSeenVersion, options.DetectionOptions)
 					fromVersion := previous.LastSeenVersion
 					for _, nextVersion := range newerVersions {
 						versionEvent := event
@@ -209,10 +218,10 @@ func (r *Runner) loop(ctx context.Context, rawURL, keyword string, options Optio
 	}
 }
 
-func versionsNewerThan(versions []string, previous string) []string {
+func versionsNewerThan(versions []string, previous string, detectionOptions json.RawMessage) []string {
 	var newer []string
 	for _, v := range versions {
-		cmp := version.Compare(v, previous)
+		cmp := version.CompareWithOptions(v, previous, detectionOptions)
 		if cmp == 1 {
 			newer = append(newer, v)
 			continue

@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
+	"golang.org/x/net/html"
 )
 
 const requestTimeout = 15 * time.Second
@@ -35,6 +37,10 @@ type FetchResult struct {
 	LinkURL       string
 }
 
+type Options struct {
+	ContentSelector string `json:"content_selector"`
+}
+
 type unityPackageMeta struct {
 	DistTags struct {
 		Latest string `json:"latest"`
@@ -42,6 +48,11 @@ type unityPackageMeta struct {
 }
 
 func FetchContent(rawURL string) (FetchResult, error) {
+	return FetchContentWithOptions(rawURL, nil)
+}
+
+func FetchContentWithOptions(rawURL string, rawOptions json.RawMessage) (FetchResult, error) {
+	options := parseOptions(rawOptions)
 	normalizedURL := normalize.URL(rawURL)
 
 	if _, err := url.ParseRequestURI(normalizedURL); err != nil {
@@ -66,12 +77,21 @@ func FetchContent(rawURL string) (FetchResult, error) {
 		return FetchResult{Content: content, Mode: ContentModeRaw, NormalizedURL: normalizedURL}, nil
 	}
 
-	content, mode, err := fetchHTMLContent(normalizedURL)
+	content, mode, err := fetchHTMLContent(normalizedURL, options)
 	if err != nil {
 		return FetchResult{}, err
 	}
 
 	return FetchResult{Content: content, Mode: mode, NormalizedURL: normalizedURL}, nil
+}
+
+func parseOptions(raw json.RawMessage) Options {
+	var options Options
+	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "{}" {
+		return options
+	}
+	_ = json.Unmarshal(raw, &options)
+	return options
 }
 
 func isUnityPackageRegistryURL(rawURL string) bool {
@@ -241,7 +261,7 @@ func fetchRawContent(rawURL string) (string, error) {
 	return content, nil
 }
 
-func fetchHTMLContent(rawURL string) (string, ContentMode, error) {
+func fetchHTMLContent(rawURL string, options Options) (string, ContentMode, error) {
 	collector := colly.NewCollector(
 		colly.UserAgent("go-crawler-demo/1.0"),
 	)
@@ -282,6 +302,16 @@ func fetchHTMLContent(rawURL string) (string, ContentMode, error) {
 		return "", "", visitErr
 	}
 
+	if rawHTML != "" && strings.TrimSpace(options.ContentSelector) != "" {
+		content, err := renderSelectedHTMLMarkdown(rawHTML, options.ContentSelector)
+		if err != nil {
+			return "", "", err
+		}
+		if content != "" {
+			return content, ContentModeHTML, nil
+		}
+	}
+
 	if bodyText != "" {
 		return bodyText, ContentModeBody, nil
 	}
@@ -299,4 +329,141 @@ func fetchHTMLContent(rawURL string) (string, ContentMode, error) {
 	}
 
 	return "", "", fmt.Errorf("empty page text")
+}
+
+func renderSelectedHTMLMarkdown(rawHTML, selector string) (string, error) {
+	document, err := goquery.NewDocumentFromReader(strings.NewReader(rawHTML))
+	if err != nil {
+		return "", err
+	}
+	selection := document.Find(selector).First()
+	if selection.Length() == 0 {
+		return "", fmt.Errorf("content selector %q did not match", selector)
+	}
+	return renderMarkdown(selection), nil
+}
+
+func renderMarkdown(selection *goquery.Selection) string {
+	var lines []string
+	for _, node := range selection.Nodes {
+		renderNode(node, 0, &lines)
+	}
+	return cleanMarkdownLines(lines)
+}
+
+func renderNode(node *html.Node, depth int, lines *[]string) {
+	if node.Type == html.TextNode {
+		text := normalizeWhitespace(node.Data)
+		if text != "" {
+			appendLine(lines, text)
+		}
+		return
+	}
+	if node.Type != html.ElementNode {
+		return
+	}
+
+	switch strings.ToLower(node.Data) {
+	case "script", "style", "noscript":
+		return
+	case "h1":
+		appendBlock(lines, "# "+textContent(node, false))
+	case "h2":
+		appendBlock(lines, "## "+textContent(node, false))
+	case "h3":
+		appendBlock(lines, "### "+textContent(node, false))
+	case "h4":
+		appendBlock(lines, "#### "+textContent(node, false))
+	case "h5":
+		appendBlock(lines, "##### "+textContent(node, false))
+	case "h6":
+		appendBlock(lines, "###### "+textContent(node, false))
+	case "p":
+		appendBlock(lines, textContent(node, false))
+	case "br":
+		appendLine(lines, "")
+	case "ul", "ol":
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			if child.Type == html.ElementNode && strings.EqualFold(child.Data, "li") {
+				renderListItem(child, depth, lines)
+			}
+		}
+		appendLine(lines, "")
+	case "li":
+		renderListItem(node, depth, lines)
+	default:
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			renderNode(child, depth, lines)
+		}
+	}
+}
+
+func renderListItem(node *html.Node, depth int, lines *[]string) {
+	text := textContent(node, true)
+	if text != "" {
+		appendLine(lines, strings.Repeat("    ", depth)+"- "+text)
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type == html.ElementNode && (strings.EqualFold(child.Data, "ul") || strings.EqualFold(child.Data, "ol")) {
+			renderNode(child, depth+1, lines)
+		}
+	}
+}
+
+func textContent(node *html.Node, skipNestedLists bool) string {
+	var buffer bytes.Buffer
+	writeTextContent(&buffer, node, skipNestedLists)
+	return normalizeWhitespace(buffer.String())
+}
+
+func writeTextContent(buffer *bytes.Buffer, node *html.Node, skipNestedLists bool) {
+	if node.Type == html.TextNode {
+		buffer.WriteString(node.Data)
+		buffer.WriteByte(' ')
+		return
+	}
+	if node.Type == html.ElementNode {
+		name := strings.ToLower(node.Data)
+		if name == "script" || name == "style" || name == "noscript" || (skipNestedLists && (name == "ul" || name == "ol")) {
+			return
+		}
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		writeTextContent(buffer, child, skipNestedLists)
+	}
+}
+
+func normalizeWhitespace(s string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(s)), " ")
+}
+
+func appendBlock(lines *[]string, line string) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return
+	}
+	appendLine(lines, line)
+	appendLine(lines, "")
+}
+
+func appendLine(lines *[]string, line string) {
+	*lines = append(*lines, strings.TrimRight(line, " \t"))
+}
+
+func cleanMarkdownLines(lines []string) string {
+	var cleaned []string
+	blankCount := 0
+	for _, line := range lines {
+		trimmedRight := strings.TrimRight(line, " \t")
+		if strings.TrimSpace(trimmedRight) == "" {
+			blankCount++
+			if blankCount <= 1 {
+				cleaned = append(cleaned, "")
+			}
+			continue
+		}
+		blankCount = 0
+		cleaned = append(cleaned, trimmedRight)
+	}
+	return strings.TrimSpace(strings.Join(cleaned, "\n"))
 }
